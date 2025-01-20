@@ -185,7 +185,7 @@ CREATE TRIGGER validate_metadata_field_value_trigger
 CREATE TABLE public.ticket_messages (
     id           uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     ticket    uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    sender    uuid REFERENCES public.profiles (id),
+    sender    uuid REFERENCES public.users (id),
     content      text NOT NULL,
     created_at   timestamp with time zone DEFAULT now()
 ); 
