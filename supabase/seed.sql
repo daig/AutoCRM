@@ -1,3 +1,5 @@
+-- Seed data for AutoCRM
+
 -- Insert default tag types and tags
 INSERT INTO public.tag_types (name, description) 
 VALUES 
