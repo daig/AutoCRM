@@ -26,7 +26,7 @@ export const SignupPage = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase.rpc('register_user', {
+      const { error } = await supabase.rpc('register_user', {
         full_name: formData.fullName,
         email: formData.email,
         password: formData.password
