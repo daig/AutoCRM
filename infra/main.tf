@@ -84,9 +84,12 @@ variable "github_access_token" {
   sensitive   = true
 }
 
-# Add after your existing resources
+# Update outputs section
 output "amplify_app_url" {
-  value = "https://${aws_amplify_branch.main.branch_name}.${aws_amplify_app.autocrm.default_domain}"
+  value = {
+    main = "https://${aws_amplify_branch.main.branch_name}.${aws_amplify_app.autocrm.default_domain}"
+    dev  = "https://${aws_amplify_branch.dev.branch_name}.${aws_amplify_app.autocrm.default_domain}"
+  }
 }
 
 # Add these outputs
