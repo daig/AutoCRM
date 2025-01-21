@@ -96,3 +96,8 @@ function amplify-status() {
 # amplify-status dev    # Check dev branch
 # amplify-status feature/ticket-ui  # Check a feature branch
 ```
+
+# get build status
+```
+aws amplify get-job --app-id $(terraform output -raw amplify_app_id) --branch-name dev --job-id 5 | cat      
+```

@@ -25,11 +25,14 @@ interface TicketProps {
         name: string;
         value_type: string;
       };
-      field_value_user: {
-        full_name: string;
-      } | null;
+      field_value_text: string | null;
+      field_value_int: number | null;
+      field_value_float: number | null;
+      field_value_bool: boolean | null;
       field_value_date: string | null;
-      field_value_number: number | null;
+      field_value_timestamp: string | null;
+      field_value_user: { full_name: string } | null;
+      field_value_ticket: { title: string } | null;
     }[];
   };
 }
