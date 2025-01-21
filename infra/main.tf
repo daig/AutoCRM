@@ -52,6 +52,8 @@ resource "aws_amplify_branch" "main" {
   branch_name = "main"
   framework   = "React"
   stage       = "PRODUCTION"
+
+  enable_auto_build = true
 }
 
 # Variables
@@ -84,5 +86,8 @@ output "amplify_app_id" {
 }
 
 output "amplify_branch_name" {
-  value = aws_amplify_branch.main.branch_name
-} 
+  value = {
+    main = aws_amplify_branch.main.branch_name
+    dev  = aws_amplify_branch.dev.branch_name
+  }
+}

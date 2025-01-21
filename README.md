@@ -81,12 +81,17 @@ src/
 auto deploy on amplify by pushing to github.
 Check the build status:
 
-```
+```bash
 function amplify-status() {
+  BRANCH=${1:-main}  # Default to main if no branch specified
   aws amplify list-jobs \
     --app-id $(terraform output -raw amplify_app_id) \
-    --branch-name $(terraform output -raw amplify_branch_name) \
+    --branch-name $BRANCH \
     --query 'jobSummaries[0].[jobId,status,startTime,endTime]' \
     --output table
 }
+
+# Usage:
+# amplify-status        # Check main branch
+# amplify-status dev    # Check dev branch
 ```
