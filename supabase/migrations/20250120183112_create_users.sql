@@ -1,6 +1,6 @@
 -- Create new users table
 CREATE TABLE public.users (
-    id          uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
+    id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     full_name   text,
     created_at  timestamp with time zone DEFAULT now(),
     updated_at  timestamp with time zone DEFAULT now()
