@@ -131,42 +131,63 @@ export const CRMPage = () => {
 
   return (
     <Grid
-      templateColumns="1fr 300px"
+      templateColumns="300px 1fr 300px"
       gap={4}
       h="calc(100vh - 140px)"
     >
-      {/* Main Content - Ticket Details */}
-      <GridItem overflowY="auto">
+      {/* Left Sidebar - Ticket Details */}
+      <GridItem borderRight="1px" borderColor={borderColor} overflowY="auto">
         <Box p={4}>
           <TicketDetails
             ticket={selectedTicket}
             onRefresh={handleRefresh}
           />
         </Box>
-        {selectedTicket && (
-          <Box p={4}>
-            <MessageFeed ticketId={selectedTicket.id} />
-            <Flex mt={4}>
-              <Input
-                placeholder="Type a message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-              />
-              <IconButton
-                aria-label="Send message"
-                icon={<ArrowForwardIcon />}
-                ml={2}
-                onClick={handleSendMessage}
-              />
-            </Flex>
-          </Box>
-        )}
+      </GridItem>
+
+      {/* Main Content - Messages and Composer */}
+      <GridItem position="relative">
+        <Box 
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          display="flex"
+          flexDirection="column"
+        >
+          {selectedTicket && (
+            <>
+              {/* Scrollable Message Feed */}
+              <Box flex="1" overflowY="auto" p={4}>
+                <MessageFeed ticketId={selectedTicket.id} />
+              </Box>
+              
+              {/* Fixed Message Composer */}
+              <Box p={4} borderTop="1px" borderColor={borderColor}>
+                <Flex>
+                  <Input
+                    placeholder="Type a message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <IconButton
+                    aria-label="Send message"
+                    icon={<ArrowForwardIcon />}
+                    ml={2}
+                    onClick={handleSendMessage}
+                  />
+                </Flex>
+              </Box>
+            </>
+          )}
+        </Box>
       </GridItem>
 
       {/* Right Sidebar - Ticket Selection */}
