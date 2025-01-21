@@ -2,7 +2,6 @@
 CREATE TABLE public.users (
     id          uuid PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
     full_name   text,
-    role        text NOT NULL CHECK (role IN ('customer', 'agent')),
     created_at  timestamp with time zone DEFAULT now(),
     updated_at  timestamp with time zone DEFAULT now()
 );
