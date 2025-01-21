@@ -56,6 +56,15 @@ resource "aws_amplify_branch" "main" {
   enable_auto_build = true
 }
 
+resource "aws_amplify_branch" "dev" {
+  app_id      = aws_amplify_app.autocrm.id
+  branch_name = "dev"
+  framework   = "React"
+  stage       = "DEVELOPMENT"
+
+  enable_auto_build = true
+}
+
 # Variables
 variable "supabase_url" {
   type        = string
