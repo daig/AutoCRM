@@ -5,6 +5,7 @@ import { MessageFeed } from '../components/ticket/MessageFeed';
 import { useState, useEffect } from 'react';
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../config/supabase';
+import { useUser } from '../context/UserContext';
 import type { TicketData } from '../components/ticket/TicketList';
 import type { Database } from '../types/supabase';
 
@@ -15,6 +16,7 @@ export const CRMPage = () => {
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const { userId } = useUser();
 
   useEffect(() => {
     const fetchTicketDetails = async () => {
@@ -62,11 +64,12 @@ export const CRMPage = () => {
   }, [selectedTicketId]);
 
   const handleSendMessage = async () => {
-    if (!selectedTicketId || !messageInput.trim()) return;
+    if (!selectedTicketId || !messageInput.trim() || !userId) return;
 
     const message: TicketMessage = {
       ticket: selectedTicketId,
       content: messageInput.trim(),
+      sender: userId
     };
 
     const { error } = await supabase
@@ -120,14 +123,14 @@ export const CRMPage = () => {
                     handleSendMessage();
                   }
                 }}
-                isDisabled={!selectedTicketId}
+                isDisabled={!selectedTicketId || !userId}
               />
               <IconButton
                 aria-label="Send message"
                 icon={<ArrowForwardIcon />}
                 colorScheme="blue"
                 onClick={handleSendMessage}
-                isDisabled={!selectedTicketId || !messageInput.trim()}
+                isDisabled={!selectedTicketId || !messageInput.trim() || !userId}
               />
             </Flex>
           </Box>

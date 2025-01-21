@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Box, Button, FormControl, FormLabel, Input, VStack, Heading, Text, Link, useToast } from '@chakra-ui/react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../config/supabase';
+import { useUser } from '../context/UserContext';
 
 export const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -11,6 +12,8 @@ export const LoginPage = () => {
   });
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { setUserId } = useUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -36,6 +39,9 @@ export const LoginPage = () => {
         throw new Error('Invalid email or password');
       }
 
+      // Store the userId in context
+      setUserId(userId);
+
       toast({
         title: 'Login successful',
         status: 'success',
@@ -43,7 +49,9 @@ export const LoginPage = () => {
         isClosable: true,
       });
 
-      navigate('/crm');
+      // Navigate to the protected route the user tried to visit or default to /crm
+      const from = (location.state as any)?.from?.pathname || '/crm';
+      navigate(from, { replace: true });
     } catch (error) {
       toast({
         title: 'Error',
