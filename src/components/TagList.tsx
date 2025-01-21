@@ -27,19 +27,22 @@ export const TagList = () => {
         // Fetch tag types first
         const { data: typeData, error: typeError } = await supabase
           .from('tag_types')
-          .select('*');
+          .select('*')
+          .returns<TagType[]>();
 
         if (typeError) throw typeError;
-        setTagTypes(typeData);
+        setTagTypes(typeData || []);
 
         // Then fetch tags
         const { data: tagData, error: tagError } = await supabase
           .from('tags')
-          .select('*');
+          .select('*')
+          .returns<Tag[]>();
 
         if (tagError) throw tagError;
-        setTags(tagData);
+        setTags(tagData || []);
       } catch (err) {
+        console.error('Error fetching tags:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
@@ -61,6 +64,14 @@ export const TagList = () => {
     return (
       <Typography color="error" p={2}>
         Error: {error}
+      </Typography>
+    );
+  }
+
+  if (tagTypes.length === 0) {
+    return (
+      <Typography p={2}>
+        No tag types found. Please create some tag types first.
       </Typography>
     );
   }
