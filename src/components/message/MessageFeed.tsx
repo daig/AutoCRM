@@ -12,15 +12,6 @@ interface MessageData {
   };
 }
 
-interface MessageResponse {
-  id: string;
-  content: string;
-  created_at: string;
-  sender: {
-    full_name: string;
-  } | null;
-}
-
 interface MessageFeedProps {
   ticketId: string;
 }
@@ -49,12 +40,12 @@ export const MessageFeed = ({ ticketId }: MessageFeedProps) => {
       }
 
       // Transform the data to match our expected structure
-      const transformedData: MessageData[] = (data as MessageResponse[] || []).map(msg => ({
+      const transformedData: MessageData[] = ((data as any[]) || []).map(msg => ({
         id: msg.id,
         content: msg.content,
         created_at: msg.created_at,
         sender: {
-          full_name: msg.sender?.full_name || 'Unknown'
+          full_name: msg.sender?.full_name ?? 'Unknown'
         }
       }));
 

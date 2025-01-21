@@ -1,4 +1,4 @@
-import { Box, Container, Heading, VStack } from '@chakra-ui/react';
+import { Container, Heading, VStack } from '@chakra-ui/react';
 import { TicketList } from '../components/ticket/TicketList';
 
 export const CRMPage = () => {
