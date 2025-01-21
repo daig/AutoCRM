@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { VStack } from '@chakra-ui/react';
+import { VStack, Box, Text, Badge, useColorModeValue } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
-import { Ticket } from './Ticket';
 
-interface TicketData {
+export interface TicketData {
   id: string;
   title: string;
   description: string;
@@ -35,8 +34,15 @@ interface TicketData {
   }[];
 }
 
-export const TicketList = () => {
+interface TicketListProps {
+  onSelectTicket: (ticketId: string) => void;
+  selectedTicketId: string | null;
+}
+
+export const TicketList = ({ onSelectTicket, selectedTicketId }: TicketListProps) => {
   const [tickets, setTickets] = useState<TicketData[]>([]);
+  const hoverBg = useColorModeValue('gray.50', 'gray.700');
+  const selectedBg = useColorModeValue('blue.50', 'blue.900');
 
   useEffect(() => {
     const fetchTickets = async () => {
@@ -78,9 +84,34 @@ export const TicketList = () => {
   }, []);
 
   return (
-    <VStack spacing={4} align="stretch">
+    <VStack spacing={0} align="stretch" w="100%">
       {tickets.map((ticket) => (
-        <Ticket key={ticket.id} ticket={ticket} />
+        <Box
+          key={ticket.id}
+          p={4}
+          cursor="pointer"
+          onClick={() => onSelectTicket(ticket.id)}
+          bg={selectedTicketId === ticket.id ? selectedBg : 'transparent'}
+          _hover={{ bg: selectedTicketId === ticket.id ? selectedBg : hoverBg }}
+          borderBottom="1px"
+          borderColor={useColorModeValue('gray.200', 'gray.700')}
+        >
+          <Text fontWeight="medium" mb={2}>{ticket.title}</Text>
+          <Text fontSize="sm" color="gray.500" noOfLines={2}>
+            {ticket.description}
+          </Text>
+          <Box mt={2}>
+            {ticket.tags.map(({ tag }) => (
+              <Badge
+                key={tag.id}
+                mr={2}
+                colorScheme={tag.tag_type.name === 'status' ? 'green' : 'blue'}
+              >
+                {tag.name}
+              </Badge>
+            ))}
+          </Box>
+        </Box>
       ))}
     </VStack>
   );
