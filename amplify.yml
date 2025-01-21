@@ -4,6 +4,9 @@ applications:
       phases:
         preBuild:
           commands:
+            - nvm install 20.11.0
+            - nvm use 20.11.0
+            - node -v
             - npm install
         build:
           commands:
