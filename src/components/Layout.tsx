@@ -1,28 +1,40 @@
 import { ReactNode } from 'react';
-import { AppBar, Box, Container, Toolbar, Typography } from '@mui/material';
+import {
+  Box,
+  Container,
+  Flex,
+  Heading,
+  Text,
+  useColorModeValue,
+} from '@chakra-ui/react';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 export const Layout = ({ children }: LayoutProps) => {
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const headerBg = useColorModeValue('brand.500', 'brand.400');
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6">AutoCRM</Typography>
-        </Toolbar>
-      </AppBar>
-      <Container component="main" sx={{ flexGrow: 1, py: 4 }}>
-        {children}
-      </Container>
-      <Box component="footer" sx={{ py: 3, bgcolor: 'background.paper' }}>
-        <Container maxWidth="sm">
-          <Typography variant="body2" color="text.secondary" align="center">
-            © {new Date().getFullYear()} AutoCRM
-          </Typography>
+    <Flex direction="column" minH="100vh">
+      <Box as="header" bg={headerBg} color="white" py={4}>
+        <Container maxW="container.xl">
+          <Heading size="lg">AutoCRM</Heading>
         </Container>
       </Box>
-    </Box>
+      
+      <Container as="main" maxW="container.xl" flex="1" py={8}>
+        {children}
+      </Container>
+
+      <Box as="footer" bg={bgColor} py={6}>
+        <Container maxW="container.sm">
+          <Text textAlign="center" color="gray.500">
+            © {new Date().getFullYear()} AutoCRM
+          </Text>
+        </Container>
+      </Box>
+    </Flex>
   );
 }; 

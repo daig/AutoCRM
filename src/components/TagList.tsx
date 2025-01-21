@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Chip, Box, Typography, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Tag,
+  Text,
+  Heading,
+  Spinner,
+  Flex,
+  Wrap,
+  WrapItem,
+} from '@chakra-ui/react';
 import { supabase } from '../config/supabase';
 
 interface Tag {
@@ -25,7 +34,6 @@ export const TagList = () => {
     const fetchTags = async () => {
       try {
         console.log('Attempting to fetch tag types...');
-        // Fetch tag types first
         const { data: typeData, error: typeError } = await supabase
           .from('tag_types')
           .select('*')
@@ -45,7 +53,6 @@ export const TagList = () => {
         setTagTypes(typeData || []);
 
         console.log('Attempting to fetch tags...');
-        // Then fetch tags
         const { data: tagData, error: tagError } = await supabase
           .from('tags')
           .select('*')
@@ -76,47 +83,50 @@ export const TagList = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" p={2}>
-        <CircularProgress />
-      </Box>
+      <Flex justify="center" p={4}>
+        <Spinner size="xl" />
+      </Flex>
     );
   }
 
   if (error) {
     return (
-      <Typography color="error" p={2}>
+      <Text color="red.500" p={4}>
         Error: {error}
-      </Typography>
+      </Text>
     );
   }
 
   if (tagTypes.length === 0) {
     return (
-      <Typography p={2}>
+      <Text p={4}>
         No tag types found. Please create some tag types first.
-      </Typography>
+      </Text>
     );
   }
 
   return (
     <Box>
       {tagTypes.map((type) => (
-        <Box key={type.id} mb={2}>
-          <Typography variant="h6" gutterBottom>
+        <Box key={type.id} mb={6}>
+          <Heading size="md" mb={3}>
             {type.name}
-          </Typography>
-          <Box display="flex" gap={1} flexWrap="wrap">
+          </Heading>
+          <Wrap spacing={2}>
             {tags
               .filter((tag) => tag.type_id === type.id)
               .map((tag) => (
-                <Chip
-                  key={tag.id}
-                  label={tag.name}
-                  title={tag.description || undefined}
-                  variant="outlined"
-                />
+                <WrapItem key={tag.id}>
+                  <Tag
+                    size="lg"
+                    variant="outline"
+                    title={tag.description || undefined}
+                  >
+                    {tag.name}
+                  </Tag>
+                </WrapItem>
               ))}
-          </Box>
+          </Wrap>
         </Box>
       ))}
     </Box>
