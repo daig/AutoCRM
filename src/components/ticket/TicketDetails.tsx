@@ -92,27 +92,6 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
     }
   };
 
-  const handleRemoveMetadata = async (fieldTypeId: string) => {
-    try {
-      const { error } = await supabase
-        .from('ticket_metadata')
-        .delete()
-        .eq('ticket', ticket?.id)
-        .eq('field_type', fieldTypeId);
-
-      if (error) throw error;
-      onRefresh();
-    } catch (err) {
-      console.error('Error removing metadata:', err);
-      toast({
-        title: 'Error removing metadata',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
   if (!ticket) {
     return (
       <Box p={4}>
@@ -207,7 +186,7 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
             onMetadataAdded={onRefresh}
           />
         </Flex>
-        <Grid templateColumns="auto 1fr auto" gap={2} alignItems="center">
+        <Grid templateColumns="auto 1fr" gap={2} alignItems="center">
           {ticket.metadata.map((field) => (
             <React.Fragment key={field.field_type.id}>
               <GridItem>
@@ -227,16 +206,6 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
                     field.field_value_ticket?.title ||
                     'N/A'}
                 </Text>
-              </GridItem>
-              <GridItem>
-                <IconButton
-                  icon={<DeleteIcon />}
-                  aria-label={`Remove ${field.field_type.name}`}
-                  size="xs"
-                  variant="ghost"
-                  colorScheme="red"
-                  onClick={() => handleRemoveMetadata(field.field_type.id)}
-                />
               </GridItem>
             </React.Fragment>
           ))}
