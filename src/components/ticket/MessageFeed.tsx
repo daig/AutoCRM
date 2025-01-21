@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { VStack, Box, Text, Avatar, Flex, useColorModeValue } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
-import type { Database } from '../../types/supabase';
 
 type Message = {
   id: string;
