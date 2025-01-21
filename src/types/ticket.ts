@@ -1,7 +1,7 @@
 export interface TicketData {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   created_at: string;
   updated_at: string;
   tags: {
@@ -16,6 +16,7 @@ export interface TicketData {
   }[];
   metadata: {
     field_type: {
+      id: string;
       name: string;
       value_type: string;
     };
@@ -25,7 +26,7 @@ export interface TicketData {
     field_value_bool: boolean | null;
     field_value_date: string | null;
     field_value_timestamp: string | null;
-    field_value_user: { full_name: string } | null;
-    field_value_ticket: { title: string } | null;
+    field_value_user: { id: string; full_name: string } | null;
+    field_value_ticket: { id: string; title: string } | null;
   }[];
 } 

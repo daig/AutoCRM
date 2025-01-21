@@ -1,3 +1,4 @@
+import React, { useRef } from 'react';
 import { 
   VStack, 
   Box, 
@@ -17,12 +18,14 @@ import {
   AlertDialogContent,
   AlertDialogOverlay,
   Button,
-  useDisclosure
+  useDisclosure,
+  Grid,
+  GridItem,
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
-import { useRef } from 'react';
 import type { TicketData } from '../../types/ticket';
 import { TagSelector } from '../tag/TagSelector';
+import { MetadataSelector } from '../metadata/MetadataSelector';
 import { supabase } from '../../config/supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -86,6 +89,27 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
         isClosable: true,
       });
       onClose();
+    }
+  };
+
+  const handleRemoveMetadata = async (fieldTypeId: string) => {
+    try {
+      const { error } = await supabase
+        .from('ticket_metadata')
+        .delete()
+        .eq('ticket', ticket?.id)
+        .eq('field_type', fieldTypeId);
+
+      if (error) throw error;
+      onRefresh();
+    } catch (err) {
+      console.error('Error removing metadata:', err);
+      toast({
+        title: 'Error removing metadata',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
 
@@ -175,25 +199,48 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
       </Box>
 
       <Box>
-        <Text fontWeight="medium" mb={2}>Metadata</Text>
-        {ticket.metadata.map((field) => (
-          <Box key={field.field_type.name} mb={2}>
-            <Text fontSize="sm" color="gray.500">
-              {field.field_type.name}
-            </Text>
-            <Text>
-              {field.field_value_text ||
-                field.field_value_int?.toString() ||
-                field.field_value_float?.toString() ||
-                (field.field_value_bool !== null ? field.field_value_bool.toString() : '') ||
-                field.field_value_date ||
-                field.field_value_timestamp ||
-                field.field_value_user?.full_name ||
-                field.field_value_ticket?.title ||
-                'N/A'}
-            </Text>
-          </Box>
-        ))}
+        <Flex align="center" mb={2}>
+          <Text fontWeight="medium">Metadata</Text>
+          <MetadataSelector
+            ticketId={ticket.id}
+            existingMetadata={ticket.metadata}
+            onMetadataAdded={onRefresh}
+          />
+        </Flex>
+        <Grid templateColumns="auto 1fr auto" gap={2} alignItems="center">
+          {ticket.metadata.map((field) => (
+            <React.Fragment key={field.field_type.id}>
+              <GridItem>
+                <Text fontSize="sm" color="gray.500">
+                  {field.field_type.name}:
+                </Text>
+              </GridItem>
+              <GridItem>
+                <Text>
+                  {field.field_value_text ||
+                    field.field_value_int?.toString() ||
+                    field.field_value_float?.toString() ||
+                    (field.field_value_bool !== null ? (field.field_value_bool ? 'Yes' : 'No') : '') ||
+                    (field.field_value_date ? new Date(field.field_value_date).toLocaleDateString() : '') ||
+                    (field.field_value_timestamp ? new Date(field.field_value_timestamp).toLocaleString() : '') ||
+                    field.field_value_user?.full_name ||
+                    field.field_value_ticket?.title ||
+                    'N/A'}
+                </Text>
+              </GridItem>
+              <GridItem>
+                <IconButton
+                  icon={<DeleteIcon />}
+                  aria-label={`Remove ${field.field_type.name}`}
+                  size="xs"
+                  variant="ghost"
+                  colorScheme="red"
+                  onClick={() => handleRemoveMetadata(field.field_type.id)}
+                />
+              </GridItem>
+            </React.Fragment>
+          ))}
+        </Grid>
       </Box>
     </VStack>
   );
