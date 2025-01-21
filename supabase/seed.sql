@@ -118,4 +118,24 @@ SELECT
 FROM public.tickets t
 CROSS JOIN public.ticket_metadata_field_types ft
 WHERE ft.name = 'due_date'
-AND t.title IN ('Server Performance Issues', 'New User Onboarding Flow', 'Bug: Login Page CSS'); 
+AND t.title IN ('Server Performance Issues', 'New User Onboarding Flow', 'Bug: Login Page CSS');
+
+-- Add messages to tickets
+INSERT INTO public.ticket_messages (ticket, sender, content)
+SELECT 
+    t.id,
+    u.id,
+    m.content
+FROM public.tickets t
+CROSS JOIN (
+    VALUES 
+        ('Server Performance Issues', 'Bob Johnson', 'Initial investigation shows high CPU usage during peak hours.'),
+        ('Server Performance Issues', 'Alice Smith', 'I noticed memory usage is also spiking. Could be a memory leak.'),
+        ('Server Performance Issues', 'Bob Johnson', 'Good catch. I''ll check the application logs for memory-related issues.'),
+        ('New User Onboarding Flow', 'Alice Smith', 'Started wireframing the new flow. Will share designs tomorrow.'),
+        ('New User Onboarding Flow', 'Bob Johnson', 'Remember to include email verification step in the flow.'),
+        ('Bug: Login Page CSS', 'Bob Johnson', 'Confirmed the issue on iPhone and Android devices.'),
+        ('Bug: Login Page CSS', 'Alice Smith', 'The problem seems to be with the media queries. Working on a fix.')
+) AS m(ticket_title, sender_name, content)
+JOIN public.users u ON u.full_name = m.sender_name
+WHERE t.title = m.ticket_title; 
