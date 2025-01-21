@@ -91,6 +91,7 @@ function amplify-status() {
     --output table
 }
 
+
 # Usage:
 # amplify-status        # Check main branch
 # amplify-status dev    # Check dev branch
@@ -98,6 +99,21 @@ function amplify-status() {
 ```
 
 # get build status
-```
-aws amplify get-job --app-id $(terraform output -raw amplify_app_id) --branch-name dev --job-id 5 | cat      
+```bash
+function get_amplify_job() {
+    local branch=${1:-dev}  # First argument is branch, defaults to 'dev'
+    local job_id=$2         # Second argument is job ID (required)
+    
+    if [ -z "$job_id" ]; then
+        echo "Usage: get_amplify_job [branch_name] job_id"
+        echo "  branch_name: Optional. Defaults to 'dev'"
+        echo "  job_id: Required. The Amplify job ID to fetch"
+        return 1
+    fi
+
+    aws amplify get-job \
+        --app-id $(terraform output -raw amplify_app_id) \
+        --branch-name "$branch" \
+        --job-id "$job_id" | cat
+}
 ```
