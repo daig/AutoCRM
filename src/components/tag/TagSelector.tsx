@@ -83,6 +83,26 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
 
   const handleAddTag = async (tagId: string) => {
     try {
+      // Find the type of the tag being added
+      const newTag = availableTags.find(t => t.id === tagId);
+      if (!newTag) return;
+
+      // Find and delete any existing tags of the same type
+      const existingTagsOfSameType = existingTags.filter(
+        t => t.tag.type_id === newTag.type_id
+      );
+
+      if (existingTagsOfSameType.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('ticket_tags')
+          .delete()
+          .eq('ticket', ticketId)
+          .in('tag', existingTagsOfSameType.map(t => t.tag.id));
+
+        if (deleteError) throw deleteError;
+      }
+
+      // Add the new tag
       const { error } = await supabase
         .from('ticket_tags')
         .insert([
