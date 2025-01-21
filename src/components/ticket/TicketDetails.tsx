@@ -2,7 +2,6 @@ import {
   VStack, 
   Box, 
   Text, 
-  Badge, 
   Heading, 
   Divider, 
   Flex, 

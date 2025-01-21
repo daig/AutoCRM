@@ -1,7 +1,7 @@
 import { Box, Card, CardBody, CardHeader, Heading, Text, HStack, VStack } from '@chakra-ui/react';
 import { Tag } from '../tag/Tag';
 import { TicketMetadata } from '../metadata/TicketMetadata';
-import { MessageFeed } from '../message/MessageFeed';
+import { MessageFeed } from './MessageFeed';
 
 interface TicketProps {
   ticket: {
