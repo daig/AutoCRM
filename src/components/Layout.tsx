@@ -31,7 +31,7 @@ export const Layout = ({ children }: LayoutProps) => {
       <Box as="footer" bg={bgColor} py={6}>
         <Container maxW="container.sm">
           <Text textAlign="center" color="gray.500">
-            © {new Date().getFullYear()} AutoCRM
+            © {new Date().getFullYear()} AutoCRM v1
           </Text>
         </Container>
       </Box>
