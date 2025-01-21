@@ -1,14 +1,19 @@
 import { Box, Grid, GridItem, VStack, Input, IconButton, Flex, useColorModeValue } from '@chakra-ui/react';
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
+import { MessageFeed } from '../components/ticket/MessageFeed';
 import { useState, useEffect } from 'react';
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../config/supabase';
 import type { TicketData } from '../components/ticket/TicketList';
+import type { Database } from '../types/supabase';
+
+type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
 
 export const CRMPage = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
+  const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
   useEffect(() => {
@@ -56,6 +61,26 @@ export const CRMPage = () => {
     fetchTicketDetails();
   }, [selectedTicketId]);
 
+  const handleSendMessage = async () => {
+    if (!selectedTicketId || !messageInput.trim()) return;
+
+    const message: TicketMessage = {
+      ticket: selectedTicketId,
+      content: messageInput.trim(),
+    };
+
+    const { error } = await supabase
+      .from('ticket_messages')
+      .insert([message]);
+
+    if (error) {
+      console.error('Error sending message:', error);
+      return;
+    }
+
+    setMessageInput('');
+  };
+
   return (
     <Grid
       templateColumns="300px 1fr 350px"
@@ -72,12 +97,7 @@ export const CRMPage = () => {
         <VStack h="100%" spacing={0}>
           {/* Messages Area */}
           <Box flex="1" w="100%" overflowY="auto" p={4}>
-            {selectedTicketId ? (
-              // Render messages here
-              <Box>Messages will appear here</Box>
-            ) : (
-              <Box>Select a ticket to view messages</Box>
-            )}
+            <MessageFeed ticketId={selectedTicketId} />
           </Box>
 
           {/* Message Input Area */}
@@ -92,13 +112,22 @@ export const CRMPage = () => {
               <Input
                 placeholder="Type your message..."
                 mr={2}
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
                 isDisabled={!selectedTicketId}
               />
               <IconButton
                 aria-label="Send message"
                 icon={<ArrowForwardIcon />}
                 colorScheme="blue"
-                isDisabled={!selectedTicketId}
+                onClick={handleSendMessage}
+                isDisabled={!selectedTicketId || !messageInput.trim()}
               />
             </Flex>
           </Box>
