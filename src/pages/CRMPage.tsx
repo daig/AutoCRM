@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../config/supabase';
 import { useUser } from '../context/UserContext';
-import type { TicketData } from '../components/ticket/TicketList';
+import type { TicketData } from '../types/ticket';
 import type { Database } from '../types/supabase';
 
 type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
@@ -14,9 +14,45 @@ type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
 export const CRMPage = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
+  const [tickets, setTickets] = useState<TicketData[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { userId } = useUser();
+
+  const fetchTickets = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('tickets')
+      .select(`
+        *,
+        tags:ticket_tags (
+          tag (
+            id,
+            name,
+            type_id,
+            tag_type:tag_types (name)
+          )
+        ),
+        metadata:ticket_metadata!ticket_metadata_ticket_fkey (
+          field_type:ticket_metadata_field_types (name, value_type),
+          field_value_text,
+          field_value_int,
+          field_value_float,
+          field_value_bool,
+          field_value_date,
+          field_value_timestamp,
+          field_value_user:users (full_name),
+          field_value_ticket:tickets!ticket_metadata_field_value_ticket_fkey (title)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching tickets:', error);
+      return;
+    }
+
+    setTickets(data || []);
+  }, []);
 
   const fetchTicketDetails = useCallback(async () => {
     if (!selectedTicketId) {
@@ -60,8 +96,17 @@ export const CRMPage = () => {
   }, [selectedTicketId]);
 
   useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
+
+  useEffect(() => {
     fetchTicketDetails();
   }, [fetchTicketDetails]);
+
+  const handleRefresh = useCallback(() => {
+    fetchTickets();
+    fetchTicketDetails();
+  }, [fetchTickets, fetchTicketDetails]);
 
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedTicketId || !userId) return;
@@ -95,6 +140,7 @@ export const CRMPage = () => {
         <Box p={4}>
           <TicketDetails
             ticket={selectedTicket}
+            onRefresh={handleRefresh}
           />
         </Box>
         {selectedTicket && (
@@ -125,7 +171,11 @@ export const CRMPage = () => {
 
       {/* Right Sidebar - Ticket Selection */}
       <GridItem borderLeft="1px" borderColor={borderColor} overflowY="auto">
-        <TicketList onSelectTicket={setSelectedTicketId} selectedTicketId={selectedTicketId} />
+        <TicketList 
+          tickets={tickets}
+          onSelectTicket={setSelectedTicketId} 
+          selectedTicketId={selectedTicketId} 
+        />
       </GridItem>
     </Grid>
   );
