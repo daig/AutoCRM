@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { VStack, Box, Text, Avatar, Flex, useColorModeValue } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
 
-type Message = {
+export type Message = {
   id: string;
   content: string;
   created_at: string;
@@ -16,40 +16,50 @@ interface MessageFeedProps {
   ticketId: string | null;
 }
 
-export const MessageFeed = ({ ticketId }: MessageFeedProps) => {
+export interface MessageFeedHandle {
+  addMessage: (message: Message) => void;
+}
+
+export const MessageFeed = forwardRef<MessageFeedHandle, MessageFeedProps>(({ ticketId }, ref) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const messageBg = useColorModeValue('gray.50', 'gray.700');
 
-  useEffect(() => {
-    const fetchMessages = async () => {
-      if (!ticketId) {
-        setMessages([]);
-        return;
-      }
+  const fetchMessages = useCallback(async () => {
+    if (!ticketId) {
+      setMessages([]);
+      return;
+    }
 
-      const { data, error } = await supabase
-        .from('ticket_messages')
-        .select(`
+    const { data, error } = await supabase
+      .from('ticket_messages')
+      .select(`
+        id,
+        content,
+        created_at,
+        sender:users (
           id,
-          content,
-          created_at,
-          sender:users (
-            id,
-            full_name
-          )
-        `)
-        .eq('ticket', ticketId)
-        .order('created_at', { ascending: true })
-        .returns<Message[]>();
+          full_name
+        )
+      `)
+      .eq('ticket', ticketId)
+      .order('created_at', { ascending: true })
+      .returns<Message[]>();
 
-      if (error) {
-        console.error('Error fetching messages:', error);
-        return;
-      }
+    if (error) {
+      console.error('Error fetching messages:', error);
+      return;
+    }
 
-      setMessages(data || []);
-    };
+    setMessages(data || []);
+  }, [ticketId]);
 
+  useImperativeHandle(ref, () => ({
+    addMessage: (message: Message) => {
+      setMessages(prev => [...prev, message]);
+    }
+  }), []);
+
+  useEffect(() => {
     fetchMessages();
 
     // Set up real-time subscription for new messages
@@ -63,16 +73,14 @@ export const MessageFeed = ({ ticketId }: MessageFeedProps) => {
           table: 'ticket_messages',
           filter: `ticket=eq.${ticketId}`,
         },
-        () => {
-          fetchMessages();
-        }
+        fetchMessages
       )
       .subscribe();
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [ticketId]);
+  }, [ticketId, fetchMessages]);
 
   if (!ticketId) {
     return (
@@ -117,4 +125,4 @@ export const MessageFeed = ({ ticketId }: MessageFeedProps) => {
       )}
     </VStack>
   );
-}; 
+}); 

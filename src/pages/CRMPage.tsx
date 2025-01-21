@@ -1,13 +1,14 @@
 import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue } from '@chakra-ui/react';
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
-import { MessageFeed } from '../components/ticket/MessageFeed';
-import { useState, useEffect, useCallback } from 'react';
+import { MessageFeed, MessageFeedHandle, Message } from '../components/ticket/MessageFeed';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../config/supabase';
 import { useUser } from '../context/UserContext';
 import type { TicketData } from '../types/ticket';
 import type { Database } from '../types/supabase';
+import { useLocation } from 'react-router-dom';
 
 type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
 
@@ -18,6 +19,18 @@ export const CRMPage = () => {
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { userId } = useUser();
+  const location = useLocation();
+  const messageFeedRef = useRef<MessageFeedHandle>(null);
+
+  // Clear selection if navigating from a delete action
+  useEffect(() => {
+    if (location.state?.clearSelection) {
+      setSelectedTicketId(null);
+      setSelectedTicket(null);
+      // Clean up the state to prevent clearing on future navigations
+      history.replaceState({}, '');
+    }
+  }, [location]);
 
   const fetchTickets = useCallback(async () => {
     const { data, error } = await supabase
@@ -112,7 +125,17 @@ export const CRMPage = () => {
     if (!messageInput.trim() || !selectedTicketId || !userId) return;
 
     try {
-      const { error } = await supabase
+      type MessageResponse = {
+        id: string;
+        content: string;
+        created_at: string;
+        sender: {
+          id: string;
+          full_name: string;
+        };
+      };
+
+      const { data, error } = await supabase
         .from('ticket_messages')
         .insert<TicketMessage>([
           {
@@ -120,9 +143,34 @@ export const CRMPage = () => {
             sender: userId,
             content: messageInput.trim(),
           },
-        ]);
+        ])
+        .select<string, MessageResponse>(`
+          id,
+          content,
+          created_at,
+          sender:users!inner (
+            id,
+            full_name
+          )
+        `)
+        .single();
 
       if (error) throw error;
+      
+      // Add the message immediately to the feed
+      if (data) {
+        const message: Message = {
+          id: data.id,
+          content: data.content,
+          created_at: data.created_at,
+          sender: {
+            id: data.sender.id,
+            full_name: data.sender.full_name
+          }
+        };
+        messageFeedRef.current?.addMessage(message);
+      }
+      
       setMessageInput('');
     } catch (error) {
       console.error('Error sending message:', error);
@@ -160,7 +208,10 @@ export const CRMPage = () => {
             <>
               {/* Scrollable Message Feed */}
               <Box flex="1" overflowY="auto" p={4}>
-                <MessageFeed ticketId={selectedTicket.id} />
+                <MessageFeed 
+                  ref={messageFeedRef}
+                  ticketId={selectedTicket.id} 
+                />
               </Box>
               
               {/* Fixed Message Composer */}
