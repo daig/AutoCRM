@@ -19,7 +19,7 @@ resource "aws_amplify_app" "autocrm" {
   # IAM service role ARN if needed
   # iam_service_role_arn = "arn:aws:iam::123456789012:role/AmplifyRole"
 
-  build_spec = file("${path.module}/amplify.yml")
+  build_spec = file("${path.module}/../amplify.yml")
 
   # Enable branch auto-build and deployment
   enable_branch_auto_build = true
