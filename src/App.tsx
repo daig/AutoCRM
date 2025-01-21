@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import { Layout } from './components/Layout';
+import { TagList } from './components/TagList';
 
 const theme = createTheme({
   palette: {
@@ -21,7 +22,7 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<div>Home Page v5</div>} />
+            <Route path="/" element={<TagList />} />
             {/* Add more routes as needed */}
           </Routes>
         </Layout>
