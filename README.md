@@ -83,15 +83,16 @@ Check the build status:
 
 ```bash
 function amplify-status() {
-  BRANCH=${1:-main}  # Default to main if no branch specified
+  BRANCH=${1:-main}
   aws amplify list-jobs \
     --app-id $(terraform output -raw amplify_app_id) \
-    --branch-name $BRANCH \
-    --query 'jobSummaries[0].[jobId,status,startTime,endTime]' \
+    --branch-name "$BRANCH" \
+    --query 'jobSummaries[0].[branch,jobId,status,startTime,endTime]' \
     --output table
 }
 
 # Usage:
 # amplify-status        # Check main branch
 # amplify-status dev    # Check dev branch
+# amplify-status feature/ticket-ui  # Check a feature branch
 ```
