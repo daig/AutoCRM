@@ -1,4 +1,4 @@
-import { Box, Grid, GridItem, VStack, Input, IconButton, Flex, useColorModeValue } from '@chakra-ui/react';
+import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue } from '@chakra-ui/react';
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
 import { MessageFeed } from '../components/ticket/MessageFeed';

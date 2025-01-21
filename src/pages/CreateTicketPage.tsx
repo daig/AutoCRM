@@ -39,7 +39,7 @@ export const CreateTicketPage = () => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('tickets')
         .insert([
           {

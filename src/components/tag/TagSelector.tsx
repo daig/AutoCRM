@@ -47,11 +47,10 @@ interface TagSelectorProps {
 
 export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [tagTypes, setTagTypes] = useState<TagType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   const existingTagIds = new Set(existingTags.map(t => t.tag.id));
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -73,7 +72,7 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
           .returns<Tag[]>();
 
         if (tagError) throw tagError;
-        setTags(tagData || []);
+        setAvailableTags(tagData || []);
       } catch (err) {
         console.error('Error fetching tags:', err);
       }
@@ -83,7 +82,6 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
   }, []);
 
   const handleAddTag = async (tagId: string) => {
-    setIsLoading(true);
     try {
       const { error } = await supabase
         .from('ticket_tags')
@@ -98,12 +96,10 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
       onTagAdded?.();
     } catch (err) {
       console.error('Error adding tag:', err);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const filteredTags = tags
+  const filteredTags = availableTags
     .filter(tag => !existingTagIds.has(tag.id))
     .filter(tag => 
       (selectedType ? tag.type_id === selectedType : true) &&
