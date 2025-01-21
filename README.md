@@ -73,3 +73,25 @@ src/
 - Material-UI
 - Supabase
 - AWS Amplify
+
+
+
+## Debugging
+
+auto deploy on amplify by pushing to github.
+Check the build status:
+
+```
+aws amplify list-jobs \
+  --app-id $(terraform output -raw amplify_app_id) \
+  --branch-name $(terraform output -raw amplify_branch_name)
+```
+
+build logs:
+
+```
+aws amplify get-job-details \
+  --app-id $(terraform output -raw amplify_app_id) \
+  --branch-name $(terraform output -raw amplify_branch_name) \
+  --job-id <job-id>
+```
