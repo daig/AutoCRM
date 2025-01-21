@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
   Box,
-  Tag,
   Text,
   Heading,
   Spinner,
   Flex,
+  Tag,
   Wrap,
   WrapItem,
 } from '@chakra-ui/react';

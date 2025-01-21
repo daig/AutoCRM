@@ -1,16 +1,14 @@
-import { extendTheme } from '@chakra-ui/theme-utils';
-import type { ThemeConfig } from '@chakra-ui/theme';
+import { extendTheme } from '@chakra-ui/react';
 
-const config: ThemeConfig = {
+const config = {
   initialColorMode: 'light',
   useSystemColorMode: false,
+} as const;
+
+const colors = {
+  brand: {
+    500: '#1976d2',
+  },
 };
 
-export const theme = extendTheme({
-  config,
-  colors: {
-    brand: {
-      500: '#1976d2',
-    },
-  },
-}); 
+export const theme = extendTheme({ config, colors }); 
