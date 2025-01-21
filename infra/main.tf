@@ -15,6 +15,7 @@ resource "aws_amplify_app" "autocrm" {
   name         = "AutoCRM"
   repository   = "https://github.com/daig/AutoCRM"
   platform     = "WEB"
+  access_token = var.github_access_token
 
   # IAM service role ARN if needed
   # iam_service_role_arn = "arn:aws:iam::123456789012:role/AmplifyRole"
@@ -23,6 +24,22 @@ resource "aws_amplify_app" "autocrm" {
 
   # Enable branch auto-build and deployment
   enable_branch_auto_build = true
+
+  # Enable GitHub integration
+  enable_auto_branch_creation = true
+  enable_branch_auto_deletion = true
+  auto_branch_creation_patterns = [
+    "main",
+    "dev",
+    "feature/*"
+  ]
+
+  # Add GitHub webhook to trigger builds
+  custom_rule {
+    source = "/<*>"
+    status = "404"
+    target = "/index.html"
+  }
 
   environment_variables = {
     VITE_SUPABASE_URL      = var.supabase_url
@@ -48,4 +65,15 @@ variable "supabase_anon_key" {
   type        = string
   description = "Supabase Anonymous Key"
   sensitive   = true
+}
+
+variable "github_access_token" {
+  type        = string
+  description = "GitHub personal access token"
+  sensitive   = true
+}
+
+# Add after your existing resources
+output "amplify_app_url" {
+  value = "https://${aws_amplify_branch.main.branch_name}.${aws_amplify_app.autocrm.default_domain}"
 } 
