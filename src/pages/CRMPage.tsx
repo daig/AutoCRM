@@ -32,6 +32,15 @@ export const CRMPage = () => {
     }
   }, [location]);
 
+  // Handle ticket selection from navigation state
+  useEffect(() => {
+    if (location.state?.selectTicketId) {
+      setSelectedTicketId(location.state.selectTicketId);
+      // Clean up the state to prevent reselection on future navigations
+      history.replaceState({}, '');
+    }
+  }, [location]);
+
   const fetchTickets = useCallback(async () => {
     const { data, error } = await supabase
       .from('tickets')

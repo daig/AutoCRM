@@ -39,7 +39,7 @@ export const CreateTicketPage = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tickets')
         .insert([
           {
@@ -59,8 +59,8 @@ export const CreateTicketPage = () => {
         isClosable: true,
       });
 
-      // Navigate back to the CRM page
-      navigate('/crm');
+      // Navigate back to the CRM page with the new ticket ID
+      navigate('/crm', { state: { selectTicketId: data.id } });
     } catch (error) {
       toast({
         title: 'Error',
