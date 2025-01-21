@@ -24,25 +24,47 @@ export const TagList = () => {
   useEffect(() => {
     const fetchTags = async () => {
       try {
+        console.log('Attempting to fetch tag types...');
         // Fetch tag types first
         const { data: typeData, error: typeError } = await supabase
           .from('tag_types')
           .select('*')
           .returns<TagType[]>();
 
-        if (typeError) throw typeError;
+        if (typeError) {
+          console.error('Tag types error details:', {
+            message: typeError.message,
+            details: typeError.details,
+            hint: typeError.hint,
+            code: typeError.code
+          });
+          throw typeError;
+        }
+        
+        console.log('Tag types response:', typeData);
         setTagTypes(typeData || []);
 
+        console.log('Attempting to fetch tags...');
         // Then fetch tags
         const { data: tagData, error: tagError } = await supabase
           .from('tags')
           .select('*')
           .returns<Tag[]>();
 
-        if (tagError) throw tagError;
+        if (tagError) {
+          console.error('Tags error details:', {
+            message: tagError.message,
+            details: tagError.details,
+            hint: tagError.hint,
+            code: tagError.code
+          });
+          throw tagError;
+        }
+
+        console.log('Tags response:', tagData);
         setTags(tagData || []);
       } catch (err) {
-        console.error('Error fetching tags:', err);
+        console.error('Error fetching data:', err);
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
