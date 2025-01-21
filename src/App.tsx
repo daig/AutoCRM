@@ -21,7 +21,7 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<div>Home Page</div>} />
+            <Route path="/" element={<div>Home Page v2</div>} />
             {/* Add more routes as needed */}
           </Routes>
         </Layout>
