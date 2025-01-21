@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import { theme } from './theme';
 import { Layout } from './components/Layout';
-import { TagList } from './components/TagList';
+import { CRMPage } from './pages/CRMPage';
 
 function App() {
   return (
@@ -10,7 +10,7 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<TagList />} />
+            <Route path="/" element={<CRMPage />} />
             {/* Add more routes as needed */}
           </Routes>
         </Layout>
