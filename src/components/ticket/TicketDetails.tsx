@@ -1,5 +1,6 @@
-import { VStack, Box, Text, Badge, Heading, Divider } from '@chakra-ui/react';
+import { VStack, Box, Text, Badge, Heading, Divider, Flex } from '@chakra-ui/react';
 import { TicketData } from './TicketList';
+import { TagSelector } from '../tag/TagSelector';
 
 interface TicketDetailsProps {
   ticket: TicketData | null;
@@ -13,6 +14,11 @@ export const TicketDetails = ({ ticket }: TicketDetailsProps) => {
       </Box>
     );
   }
+
+  const handleTagAdded = () => {
+    // Trigger a refresh of the ticket data in the parent component
+    // This will be handled by the parent's useEffect that fetches ticket details
+  };
 
   return (
     <VStack spacing={4} align="stretch">
@@ -31,7 +37,14 @@ export const TicketDetails = ({ ticket }: TicketDetailsProps) => {
       </Box>
 
       <Box>
-        <Text fontWeight="medium" mb={2}>Tags</Text>
+        <Flex align="center" mb={2}>
+          <Text fontWeight="medium">Tags</Text>
+          <TagSelector
+            ticketId={ticket.id}
+            existingTags={ticket.tags}
+            onTagAdded={handleTagAdded}
+          />
+        </Flex>
         <Box>
           {ticket.tags.map(({ tag }) => (
             <Badge

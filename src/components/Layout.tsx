@@ -5,8 +5,11 @@ import {
   Flex,
   Heading,
   Text,
+  Button,
   useColorModeValue,
 } from '@chakra-ui/react';
+import { AddIcon } from '@chakra-ui/icons';
+import { useNavigate } from 'react-router-dom';
 
 interface LayoutProps {
   children: ReactNode;
@@ -15,12 +18,22 @@ interface LayoutProps {
 export const Layout = ({ children }: LayoutProps) => {
   const bgColor = useColorModeValue('white', 'gray.800');
   const headerBg = useColorModeValue('brand.500', 'brand.400');
+  const navigate = useNavigate();
 
   return (
     <Flex direction="column" minH="100vh">
       <Box as="header" bg={headerBg} color="white" py={4}>
         <Container maxW="container.xl">
-          <Heading size="lg">AutoCRM</Heading>
+          <Flex justify="space-between" align="center">
+            <Heading size="lg">AutoCRM</Heading>
+            <Button
+              leftIcon={<AddIcon />}
+              colorScheme="whiteAlpha"
+              onClick={() => navigate('/crm/create-ticket')}
+            >
+              Create Ticket
+            </Button>
+          </Flex>
         </Container>
       </Box>
       

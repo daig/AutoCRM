@@ -5,6 +5,7 @@ import { Layout } from './components/Layout';
 import { CRMPage } from './pages/CRMPage';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
+import { CreateTicketPage } from './pages/CreateTicketPage';
 import { UserProvider, useUser } from './context/UserContext';
 
 // Protected Route wrapper component
@@ -31,6 +32,13 @@ function App() {
               <ProtectedRoute>
                 <Layout>
                   <CRMPage />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/crm/create-ticket" element={
+              <ProtectedRoute>
+                <Layout>
+                  <CreateTicketPage />
                 </Layout>
               </ProtectedRoute>
             } />
