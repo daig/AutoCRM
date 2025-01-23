@@ -2,6 +2,7 @@ import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue } from 
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
 import { MessageFeed, MessageFeedHandle, Message } from '../components/ticket/MessageFeed';
+import { TicketTagFilter } from '../components/ticket/TicketTagFilter';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../config/supabase';
@@ -16,6 +17,7 @@ export const CRMPage = () => {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
   const [tickets, setTickets] = useState<TicketData[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { userId } = useUser();
@@ -42,39 +44,55 @@ export const CRMPage = () => {
   }, [location]);
 
   const fetchTickets = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('tickets')
-      .select(`
-        *,
-        tags:ticket_tags (
-          tag (
-            id,
-            name,
-            type_id,
-            tag_type:tag_types (name)
+    try {
+      let query = supabase
+        .from('tickets')
+        .select(`
+          *,
+          tags:ticket_tags (
+            tag (
+              id,
+              name,
+              type_id,
+              tag_type:tag_types (name)
+            )
+          ),
+          metadata:ticket_metadata!ticket_metadata_ticket_fkey (
+            field_type:ticket_metadata_field_types (name, value_type),
+            field_value_text,
+            field_value_int,
+            field_value_float,
+            field_value_bool,
+            field_value_date,
+            field_value_timestamp,
+            field_value_user:users (full_name),
+            field_value_ticket:tickets!ticket_metadata_field_value_ticket_fkey (title)
           )
-        ),
-        metadata:ticket_metadata!ticket_metadata_ticket_fkey (
-          field_type:ticket_metadata_field_types (name, value_type),
-          field_value_text,
-          field_value_int,
-          field_value_float,
-          field_value_bool,
-          field_value_date,
-          field_value_timestamp,
-          field_value_user:users (full_name),
-          field_value_ticket:tickets!ticket_metadata_field_value_ticket_fkey (title)
-        )
-      `)
-      .order('created_at', { ascending: false });
+        `);
 
-    if (error) {
+      // Apply tag filters if any are selected
+      if (selectedTags.length > 0) {
+        // First get the ticket IDs that have any of the selected tags
+        const { data: taggedTickets, error: tagError } = await supabase
+          .from('ticket_tags')
+          .select('ticket')
+          .in('tag', selectedTags);
+
+        if (tagError) throw tagError;
+
+        // Then filter the main query by these ticket IDs
+        query = query.in('id', (taggedTickets || []).map(t => t.ticket));
+      }
+
+      query = query.order('created_at', { ascending: false });
+      const { data, error } = await query;
+
+      if (error) throw error;
+      setTickets(data || []);
+    } catch (error) {
       console.error('Error fetching tickets:', error);
-      return;
     }
-
-    setTickets(data || []);
-  }, []);
+  }, [selectedTags]);
 
   const fetchTicketDetails = useCallback(async () => {
     if (!selectedTicketId) {
@@ -250,13 +268,19 @@ export const CRMPage = () => {
         </Box>
       </GridItem>
 
-      {/* Right Sidebar - Ticket Selection */}
+      {/* Right Sidebar - Ticket List */}
       <GridItem borderLeft="1px" borderColor={borderColor} overflowY="auto">
-        <TicketList 
-          tickets={tickets}
-          onSelectTicket={setSelectedTicketId} 
-          selectedTicketId={selectedTicketId} 
+        <TicketTagFilter
+          selectedTags={selectedTags}
+          onTagsChange={setSelectedTags}
         />
+        <Box>
+          <TicketList
+            tickets={tickets}
+            onSelectTicket={setSelectedTicketId}
+            selectedTicketId={selectedTicketId}
+          />
+        </Box>
       </GridItem>
     </Grid>
   );
