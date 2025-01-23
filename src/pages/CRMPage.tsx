@@ -127,12 +127,66 @@ export const CRMPage = () => {
               console.error('Missing columnName in filter:', filter);
               return [];
             }
-            const { data } = await supabase
+
+            let query = supabase
               .from('ticket_metadata')
               .select('ticket')
-              .eq('field_type', filter.fieldType.id)
-              .eq(filter.columnName, filter.value);
+              .eq('field_type', filter.fieldType.id);
+
+            // Handle numeric filters
+            if (filter.numericFilter) {
+              const { mode, value, value2 } = filter.numericFilter;
+              if (value === null) return [];
+
+              switch (mode) {
+                case 'eq':
+                  query = query.eq(filter.columnName, value);
+                  break;
+                case 'gt':
+                  query = query.gt(filter.columnName, value);
+                  break;
+                case 'lt':
+                  query = query.lt(filter.columnName, value);
+                  break;
+                case 'between':
+                  if (value2 !== null) {
+                    const minValue = Math.min(value, value2);
+                    const maxValue = Math.max(value, value2);
+                    query = query
+                      .gte(filter.columnName, minValue)
+                      .lte(filter.columnName, maxValue);
+                  }
+                  break;
+              }
+            } else if (filter.dateFilter) {
+              // Handle date/timestamp filters
+              const { mode, value, value2 } = filter.dateFilter;
+              if (value === null) return [];
+
+              switch (mode) {
+                case 'eq':
+                  query = query.eq(filter.columnName, value);
+                  break;
+                case 'gt':
+                  query = query.gt(filter.columnName, value);
+                  break;
+                case 'lt':
+                  query = query.lt(filter.columnName, value);
+                  break;
+                case 'between':
+                  if (value2 !== null) {
+                    query = query
+                      .gte(filter.columnName, value)
+                      .lte(filter.columnName, value2);
+                  }
+                  break;
+              }
+            } else {
+              // Handle non-numeric, non-date filters
+              query = query.eq(filter.columnName, filter.value);
+            }
             
+            const { data } = await query;
             return (data || []).map(t => t.ticket);
           });
 
