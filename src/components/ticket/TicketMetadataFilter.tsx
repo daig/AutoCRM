@@ -49,6 +49,13 @@ interface TicketMetadataFilterProps {
   onFilterEnabledChange: (enabled: boolean) => void;
 }
 
+// Remove the timezone adjustment functions and simplify date handling
+const formatDateValue = (date: string | null) => {
+  if (!date) return '';
+  // Just return the date string as is - it's already in YYYY-MM-DD format
+  return date;
+};
+
 export const TicketMetadataFilter = ({ 
   isFilterEnabled,
   onFilterChange,
@@ -221,7 +228,7 @@ export const TicketMetadataFilter = ({
         return (
           <Input
             type="date"
-            value={fieldValue || ''}
+            value={formatDateValue(fieldValue)}
             onChange={(e) => setFieldValue(e.target.value)}
             isDisabled={!isFilterEnabled}
           />
@@ -231,7 +238,11 @@ export const TicketMetadataFilter = ({
           <Input
             type="datetime-local"
             value={fieldValue || ''}
-            onChange={(e) => setFieldValue(e.target.value)}
+            onChange={(e) => {
+              // For timestamp fields, we do want to handle timezone
+              const date = new Date(e.target.value);
+              setFieldValue(date.toISOString());
+            }}
             isDisabled={!isFilterEnabled}
           />
         );

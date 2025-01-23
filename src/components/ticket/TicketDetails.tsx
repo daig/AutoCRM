@@ -35,6 +35,13 @@ interface TicketDetailsProps {
   onRefresh: () => void;
 }
 
+// Add utility function for formatting dates
+const formatDate = (dateStr: string) => {
+  // For a date field (YYYY-MM-DD), we want to display it without timezone conversion
+  // Split by T or space to handle both ISO format and plain dates
+  return dateStr.split(/[T\s]/)[0];
+};
+
 export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
   const toast = useToast();
   const navigate = useNavigate();
@@ -223,7 +230,7 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
                     field.field_value_int?.toString() ||
                     field.field_value_float?.toString() ||
                     (field.field_value_bool !== null ? (field.field_value_bool ? 'Yes' : 'No') : '') ||
-                    (field.field_value_date ? new Date(field.field_value_date).toLocaleDateString() : '') ||
+                    (field.field_value_date ? formatDate(field.field_value_date) : '') ||
                     (field.field_value_timestamp ? new Date(field.field_value_timestamp).toLocaleString() : '') ||
                     field.field_value_user?.full_name ||
                     field.field_value_ticket?.title ||
