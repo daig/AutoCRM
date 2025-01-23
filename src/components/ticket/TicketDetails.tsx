@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   VStack, 
   Box, 
@@ -21,6 +21,7 @@ import {
   useDisclosure,
   Grid,
   GridItem,
+  Spinner,
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
 import type { TicketData } from '../../types/ticket';
@@ -39,9 +40,13 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
   const navigate = useNavigate();
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const [loadingTags, setLoadingTags] = useState<{ [key: string]: boolean }>({});
 
   const handleRemoveTag = async (tagId: string) => {
     try {
+      setLoadingTags(prev => ({ ...prev, [tagId]: true }));
+      
+      // Delete the tag
       const { error } = await supabase
         .from('ticket_tags')
         .delete()
@@ -49,7 +54,18 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
         .eq('tag', tagId);
 
       if (error) throw error;
-      onRefresh();
+
+      // Wait a small delay after the delete before refreshing to ensure the database has updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Refresh the UI
+      await onRefresh();
+      
+      // Wait a small delay after the refresh to ensure React has updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Finally clear the loading state
+      setLoadingTags(prev => ({ ...prev, [tagId]: false }));
     } catch (err) {
       console.error('Error removing tag:', err);
       toast({
@@ -58,6 +74,7 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
         duration: 3000,
         isClosable: true,
       });
+      setLoadingTags(prev => ({ ...prev, [tagId]: false }));
     }
   };
 
@@ -171,7 +188,13 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
               size="md"
             >
               <TagLabel>{tag.name}</TagLabel>
-              <TagCloseButton onClick={() => handleRemoveTag(tag.id)} />
+              {loadingTags[tag.id] ? (
+                <Box ml={1} mr={1}>
+                  <Spinner size="xs" />
+                </Box>
+              ) : (
+                <TagCloseButton onClick={() => handleRemoveTag(tag.id)} />
+              )}
             </Tag>
           ))}
         </Box>

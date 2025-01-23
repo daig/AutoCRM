@@ -16,6 +16,7 @@ import {
   HStack,
   Button,
   useColorModeValue,
+  Spinner,
 } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../../config/supabase';
@@ -51,6 +52,7 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
   const [tagTypes, setTagTypes] = useState<TagType[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [loadingTagId, setLoadingTagId] = useState<string | null>(null);
 
   const existingTagIds = new Set(existingTags.map(t => t.tag.id));
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -83,6 +85,7 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
 
   const handleAddTag = async (tagId: string) => {
     try {
+      setLoadingTagId(tagId);
       // Find the type of the tag being added
       const newTag = availableTags.find(t => t.id === tagId);
       if (!newTag) return;
@@ -114,8 +117,11 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
 
       if (error) throw error;
       onTagAdded?.();
+      setIsOpen(false);
     } catch (err) {
       console.error('Error adding tag:', err);
+    } finally {
+      setLoadingTagId(null);
     }
   };
 
@@ -178,17 +184,22 @@ export const TagSelector = ({ ticketId, existingTags, onTagAdded }: TagSelectorP
                 <Wrap spacing={2}>
                   {filteredTags.map((tag) => {
                     const tagType = tagTypes.find(t => t.id === tag.type_id);
+                    const isLoading = loadingTagId === tag.id;
                     return (
                       <WrapItem key={tag.id}>
                         <Tag
                           size="md"
                           variant="outline"
-                          cursor="pointer"
-                          onClick={() => handleAddTag(tag.id)}
+                          cursor={isLoading ? "default" : "pointer"}
+                          onClick={isLoading ? undefined : () => handleAddTag(tag.id)}
                           title={tag.description || undefined}
                           colorScheme={tagType?.name === 'status' ? 'green' : 'blue'}
+                          opacity={isLoading ? 0.5 : 1}
                         >
-                          <TagLabel>{tag.name}</TagLabel>
+                          <TagLabel>
+                            {tag.name}
+                            {isLoading && <Spinner size="xs" ml={2} />}
+                          </TagLabel>
                         </Tag>
                       </WrapItem>
                     );
