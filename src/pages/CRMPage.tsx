@@ -18,6 +18,7 @@ export const CRMPage = () => {
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
   const [tickets, setTickets] = useState<TicketData[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isFilterEnabled, setIsFilterEnabled] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { userId } = useUser();
@@ -43,7 +44,7 @@ export const CRMPage = () => {
     }
   }, [location]);
 
-  const fetchTickets = useCallback(async () => {
+  const fetchTickets = useCallback(async (shouldApplyFilters = isFilterEnabled) => {
     try {
       let query = supabase
         .from('tickets')
@@ -70,8 +71,8 @@ export const CRMPage = () => {
           )
         `);
 
-      // Apply tag filters if any are selected
-      if (selectedTags.length > 0) {
+      // Apply tag filters only if filtering is enabled
+      if (selectedTags.length > 0 && shouldApplyFilters) {
         // First get all selected tags with their types
         const { data: selectedTagData, error: tagError } = await supabase
           .from('tags')
@@ -236,6 +237,12 @@ export const CRMPage = () => {
     }
   };
 
+  // Handle filter toggle separately
+  const handleFilterEnabledChange = (enabled: boolean) => {
+    setIsFilterEnabled(enabled);
+    fetchTickets(enabled);
+  };
+
   return (
     <Grid
       templateColumns="300px 1fr 300px"
@@ -308,6 +315,8 @@ export const CRMPage = () => {
           selectedTicketId={selectedTicketId}
           selectedTags={selectedTags}
           onTagsChange={setSelectedTags}
+          isFilterEnabled={isFilterEnabled}
+          onFilterEnabledChange={handleFilterEnabledChange}
         />
       </GridItem>
     </Grid>

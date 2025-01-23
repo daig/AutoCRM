@@ -7,18 +7,19 @@ import {
   PopoverBody,
   PopoverHeader,
   PopoverFooter,
-  Checkbox,
   VStack,
   Text,
   useColorModeValue,
   HStack,
-  Divider,
   Icon,
   Tag,
+  TagLabel,
   Wrap,
   WrapItem,
   Switch,
   Tooltip,
+  Input,
+  Divider,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
@@ -28,6 +29,7 @@ interface Tag {
   id: string;
   name: string;
   type_id: string;
+  description: string | null;
   tag_type: {
     name: string;
   };
@@ -37,39 +39,53 @@ interface TagType {
   id: string;
   name: string;
   description: string | null;
-  tags: Tag[];
 }
 
 interface TicketTagFilterProps {
   selectedTags: string[];
   onTagsChange: (tags: string[]) => void;
+  isFilterEnabled: boolean;
+  onFilterEnabledChange: (enabled: boolean) => void;
 }
 
-export const TicketTagFilter = ({ selectedTags, onTagsChange }: TicketTagFilterProps) => {
+export const TicketTagFilter = ({ 
+  selectedTags, 
+  onTagsChange,
+  isFilterEnabled,
+  onFilterEnabledChange
+}: TicketTagFilterProps) => {
   const [tagTypes, setTagTypes] = useState<TagType[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isFilterEnabled, setIsFilterEnabled] = useState(selectedTags.length > 0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState<string | null>(null);
+  
   const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const bgColor = useColorModeValue('white', 'gray.800');
 
   useEffect(() => {
     const fetchTags = async () => {
       try {
-        const { data, error } = await supabase
+        const { data: typeData, error: typeError } = await supabase
           .from('tag_types')
+          .select('*')
+          .returns<TagType[]>();
+
+        if (typeError) throw typeError;
+        setTagTypes(typeData || []);
+
+        const { data: tagData, error: tagError } = await supabase
+          .from('tags')
           .select(`
             *,
-            tags (
-              id,
-              name,
-              type_id,
-              tag_type:tag_types!inner (
-                name
-              )
+            tag_type:tag_types!inner (
+              name
             )
-          `);
+          `)
+          .returns<Tag[]>();
 
-        if (error) throw error;
-        setTagTypes(data || []);
+        if (tagError) throw tagError;
+        setAvailableTags(tagData || []);
       } catch (err) {
         console.error('Error fetching tags:', err);
       } finally {
@@ -85,22 +101,41 @@ export const TicketTagFilter = ({ selectedTags, onTagsChange }: TicketTagFilterP
       ? selectedTags.filter(id => id !== tagId)
       : [...selectedTags, tagId];
     onTagsChange(newSelectedTags);
+    setSearchQuery('');
   };
 
-  const handleFilterToggle = (enabled: boolean) => {
-    setIsFilterEnabled(enabled);
-    if (!enabled) {
-      onTagsChange([]);
+  const handleFilterButtonClick = () => {
+    if (!isFilterEnabled) {
+      onFilterEnabledChange(true);
     }
   };
 
   const getTagById = (tagId: string) => {
-    for (const type of tagTypes) {
-      const tag = type.tags.find(t => t.id === tagId);
-      if (tag) return tag;
-    }
-    return null;
+    return availableTags.find(t => t.id === tagId) || null;
   };
+
+  const filteredTags = availableTags.filter(tag => 
+    (selectedType ? tag.type_id === selectedType : true) &&
+    (searchQuery
+      ? tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+      : true)
+  );
+
+  // Group selected tags by type
+  const selectedTagsByType = selectedTags.reduce((acc, tagId) => {
+    const tag = getTagById(tagId);
+    if (!tag) return acc;
+    
+    if (!acc[tag.type_id]) {
+      const tagType = tagTypes.find(t => t.id === tag.type_id);
+      acc[tag.type_id] = {
+        typeName: tagType?.name || 'Unknown',
+        tags: []
+      };
+    }
+    acc[tag.type_id].tags.push(tag);
+    return acc;
+  }, {} as Record<string, { typeName: string; tags: Tag[] }>);
 
   if (loading) {
     return <Text p={4}>Loading filters...</Text>;
@@ -114,7 +149,7 @@ export const TicketTagFilter = ({ selectedTags, onTagsChange }: TicketTagFilterP
             <Switch
               size="sm"
               isChecked={isFilterEnabled}
-              onChange={(e) => handleFilterToggle(e.target.checked)}
+              onChange={(e) => onFilterEnabledChange(e.target.checked)}
             />
           </Tooltip>
           <Popover placement="right-start" strategy="fixed">
@@ -123,37 +158,71 @@ export const TicketTagFilter = ({ selectedTags, onTagsChange }: TicketTagFilterP
                 leftIcon={<Icon as={FiFilter} />}
                 size="sm"
                 variant="outline"
-                isDisabled={!isFilterEnabled}
+                onClick={handleFilterButtonClick}
               >
                 Filter
               </Button>
             </PopoverTrigger>
-            <PopoverContent>
+            <PopoverContent width="300px" bg={bgColor}>
               <PopoverHeader fontWeight="semibold" borderBottom="1px" borderColor={borderColor}>
                 Filter by Tags
               </PopoverHeader>
-              <PopoverBody maxH="400px" overflowY="auto">
-                <VStack align="stretch" spacing={4} divider={<Divider />}>
-                  {tagTypes.map((type) => (
-                    <Box key={type.id}>
-                      <Text fontWeight="medium" mb={2} color="gray.600">
+              <PopoverBody>
+                <VStack align="stretch" spacing={3}>
+                  <Input
+                    placeholder="Search tags..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    size="sm"
+                    isDisabled={!isFilterEnabled}
+                  />
+                  
+                  <HStack spacing={2} wrap="wrap">
+                    <Button
+                      size="xs"
+                      variant={selectedType === null ? 'solid' : 'ghost'}
+                      onClick={() => setSelectedType(null)}
+                      isDisabled={!isFilterEnabled}
+                    >
+                      All
+                    </Button>
+                    {tagTypes.map((type) => (
+                      <Button
+                        key={type.id}
+                        size="xs"
+                        variant={selectedType === type.id ? 'solid' : 'ghost'}
+                        onClick={() => setSelectedType(type.id)}
+                        isDisabled={!isFilterEnabled}
+                      >
                         {type.name}
-                      </Text>
-                      <VStack align="stretch" pl={2}>
-                        {type.tags.map((tag) => (
-                          <Checkbox
-                            key={tag.id}
-                            isChecked={selectedTags.includes(tag.id)}
-                            onChange={() => handleTagToggle(tag.id)}
-                            size="sm"
-                            isDisabled={!isFilterEnabled}
+                      </Button>
+                    ))}
+                  </HStack>
+
+                  <Box maxH="200px" overflowY="auto">
+                    <Wrap spacing={2}>
+                      {filteredTags.map((tag) => (
+                        <WrapItem key={tag.id}>
+                          <Tag
+                            size="md"
+                            variant={selectedTags.includes(tag.id) ? 'solid' : 'outline'}
+                            cursor={isFilterEnabled ? "pointer" : "not-allowed"}
+                            onClick={isFilterEnabled ? () => handleTagToggle(tag.id) : undefined}
+                            title={tag.description || undefined}
+                            colorScheme={tag.tag_type.name === 'status' ? 'green' : 'blue'}
+                            opacity={isFilterEnabled ? 1 : 0.6}
                           >
-                            {tag.name}
-                          </Checkbox>
-                        ))}
-                      </VStack>
-                    </Box>
-                  ))}
+                            <TagLabel>{tag.name}</TagLabel>
+                          </Tag>
+                        </WrapItem>
+                      ))}
+                      {filteredTags.length === 0 && (
+                        <Text color="gray.500" fontSize="sm">
+                          No matching tags found
+                        </Text>
+                      )}
+                    </Wrap>
+                  </Box>
                 </VStack>
               </PopoverBody>
               <PopoverFooter borderTop="1px" borderColor={borderColor}>
@@ -170,26 +239,29 @@ export const TicketTagFilter = ({ selectedTags, onTagsChange }: TicketTagFilterP
           </Popover>
         </HStack>
 
-        {/* Show selected tags */}
-        <Wrap spacing={2} flex={1}>
-          {isFilterEnabled && selectedTags.map((tagId) => {
-            const tag = getTagById(tagId);
-            if (!tag) return null;
-            return (
-              <WrapItem key={tagId}>
-                <Tag
-                  size="sm"
-                  variant="subtle"
-                  colorScheme={tag.tag_type.name === 'status' ? 'green' : 'blue'}
-                  cursor="pointer"
-                  onClick={() => handleTagToggle(tagId)}
-                >
-                  {tag.name}
-                </Tag>
-              </WrapItem>
-            );
-          })}
-        </Wrap>
+        {/* Show selected tags grouped by type */}
+        <VStack align="stretch" flex={1} spacing={2}>
+          {isFilterEnabled && Object.entries(selectedTagsByType).map(([typeId, { typeName, tags }]) => (
+            <Box key={typeId}>
+              <Text fontSize="xs" color="gray.500" mb={1}>{typeName}</Text>
+              <Wrap spacing={2}>
+                {tags.map((tag) => (
+                  <WrapItem key={tag.id}>
+                    <Tag
+                      size="sm"
+                      variant="subtle"
+                      colorScheme={tag.tag_type.name === 'status' ? 'green' : 'blue'}
+                      cursor="pointer"
+                      onClick={() => handleTagToggle(tag.id)}
+                    >
+                      <TagLabel>{tag.name}</TagLabel>
+                    </Tag>
+                  </WrapItem>
+                ))}
+              </Wrap>
+            </Box>
+          ))}
+        </VStack>
       </HStack>
     </Box>
   );
