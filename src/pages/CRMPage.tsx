@@ -128,6 +128,26 @@ export const CRMPage = () => {
               return [];
             }
 
+            if (filter.isMissingFilter) {
+              // For missing field filters, we want tickets that don't have this metadata field type
+              const { data } = await supabase
+                .from('ticket_metadata')
+                .select('ticket')
+                .eq('field_type', filter.fieldType.id);
+              
+              // Get all ticket IDs that have this field type
+              const ticketsWithField = (data || []).map(t => t.ticket);
+              
+              // Then get all ticket IDs and filter out the ones that have the field
+              const { data: allTickets } = await supabase
+                .from('tickets')
+                .select('id');
+              
+              return (allTickets || [])
+                .map(t => t.id)
+                .filter(id => !ticketsWithField.includes(id));
+            }
+
             let query = supabase
               .from('ticket_metadata')
               .select('ticket')

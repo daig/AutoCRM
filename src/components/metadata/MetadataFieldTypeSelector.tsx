@@ -3,12 +3,14 @@ import {
   Card,
   CardBody,
   HStack,
-  VStack,
   Text,
   Icon,
   useColorModeValue,
+  IconButton,
+  Tooltip,
+  Box,
 } from '@chakra-ui/react';
-import { FiFilter, FiUser, FiTag, FiCalendar, FiClock, FiToggleLeft, FiHash, FiType, FiPercent } from 'react-icons/fi';
+import { FiFilter, FiUser, FiTag, FiCalendar, FiClock, FiToggleLeft, FiHash, FiType, FiPercent, FiSlash } from 'react-icons/fi';
 
 export interface MetadataFieldType {
   id: string;
@@ -21,6 +23,7 @@ interface MetadataFieldTypeSelectorProps {
   fieldTypes: MetadataFieldType[];
   selectedFieldType: MetadataFieldType | null;
   onFieldTypeSelect: (fieldTypeId: string) => void;
+  onAddMissingFilter?: (fieldType: MetadataFieldType) => void;
   isDisabled?: boolean;
 }
 
@@ -51,6 +54,7 @@ export const MetadataFieldTypeSelector = ({
   fieldTypes,
   selectedFieldType,
   onFieldTypeSelect,
+  onAddMissingFilter,
   isDisabled = false,
 }: MetadataFieldTypeSelectorProps) => {
   return (
@@ -59,26 +63,68 @@ export const MetadataFieldTypeSelector = ({
         const IconComponent = getFieldTypeIcon(type.value_type);
         const isSelected = selectedFieldType?.id === type.id;
         return (
-          <Card
+          <Box
             key={type.id}
-            size="sm"
-            variant={isSelected ? "filled" : "outline"}
-            cursor={isDisabled ? "not-allowed" : "pointer"}
-            onClick={() => !isDisabled && onFieldTypeSelect(type.id)}
-            _hover={!isDisabled ? { bg: useColorModeValue('gray.50', 'gray.700') } : undefined}
-            bg={isSelected ? useColorModeValue('blue.50', 'blue.900') : undefined}
-            borderColor={isSelected ? 'blue.500' : undefined}
-            opacity={isDisabled ? 0.6 : 1}
+            position="relative"
+            sx={{
+              '&:hover .missing-icon': {
+                opacity: 1
+              }
+            }}
           >
-            <CardBody p={2}>
-              <HStack spacing={2}>
-                <Icon as={IconComponent} color={isSelected ? 'blue.500' : 'gray.500'} />
-                <VStack align="start" spacing={0}>
-                  <Text fontSize="sm" fontWeight="medium">{type.name}</Text>
-                </VStack>
-              </HStack>
-            </CardBody>
-          </Card>
+            <Card
+              size="sm"
+              variant={isSelected ? "filled" : "outline"}
+              cursor={isDisabled ? "not-allowed" : "pointer"}
+              onClick={() => !isDisabled && onFieldTypeSelect(type.id)}
+              _hover={!isDisabled ? { bg: useColorModeValue('gray.50', 'gray.700') } : undefined}
+              bg={isSelected ? useColorModeValue('blue.50', 'blue.900') : undefined}
+              borderColor={isSelected ? 'blue.500' : undefined}
+              opacity={isDisabled ? 0.6 : 1}
+            >
+              <CardBody p={2}>
+                <HStack spacing={2}>
+                  <Icon as={IconComponent} color={isSelected ? 'blue.500' : 'gray.500'} flexShrink={0} />
+                  <Text 
+                    fontSize="sm" 
+                    fontWeight="medium" 
+                    noOfLines={1}
+                  >
+                    {type.name}
+                  </Text>
+                </HStack>
+              </CardBody>
+            </Card>
+            {onAddMissingFilter && (
+              <Box 
+                className="missing-icon"
+                position="absolute" 
+                right={1} 
+                top={1}
+                opacity={0}
+                bg={useColorModeValue('white', 'gray.800')}
+                borderRadius="md"
+                transition="opacity 0.2s"
+                shadow="sm"
+                zIndex={1}
+              >
+                <Tooltip label="Find tickets missing this field" placement="right">
+                  <IconButton
+                    aria-label="Find missing"
+                    icon={<Icon as={FiSlash} boxSize="14px" />}
+                    size="xs"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onAddMissingFilter(type);
+                    }}
+                    isDisabled={isDisabled}
+                    _hover={{ bg: useColorModeValue('gray.100', 'gray.600') }}
+                  />
+                </Tooltip>
+              </Box>
+            )}
+          </Box>
         );
       })}
     </SimpleGrid>

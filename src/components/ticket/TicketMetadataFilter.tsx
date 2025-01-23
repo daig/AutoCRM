@@ -71,6 +71,7 @@ export interface MetadataFilter {
   columnName?: string;
   numericFilter?: NumericFilterValue;
   dateFilter?: DateFilterValue;
+  isMissingFilter?: boolean;
 }
 
 interface TicketMetadataFilterProps {
@@ -103,6 +104,7 @@ export const TicketMetadataFilter = ({
   const [secondValue, setSecondValue] = useState<number | null>(null);
   const [dateMode, setDateMode] = useState<DateFilterMode>('between');
   const [dateSecondValue, setDateSecondValue] = useState<string | null>(null);
+  const [isMissingFilter, setIsMissingFilter] = useState(false);
   
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -147,17 +149,20 @@ export const TicketMetadataFilter = ({
   const handleAddFilter = () => {
     if (!selectedFieldType) return;
 
-    // For date/timestamp fields, validate that at least one date is provided
-    // and that the dates are in correct order if both are provided
-    if (selectedFieldType.value_type === 'date' || selectedFieldType.value_type === 'timestamp') {
-      if (!fieldValue && !dateSecondValue) return;
-      if (fieldValue && dateSecondValue) {
-        const start = new Date(fieldValue);
-        const end = new Date(dateSecondValue);
-        if (start > end) return;
+    // Skip value validation if we're looking for missing fields
+    if (!isMissingFilter) {
+      // For date/timestamp fields, validate that at least one date is provided
+      // and that the dates are in correct order if both are provided
+      if (selectedFieldType.value_type === 'date' || selectedFieldType.value_type === 'timestamp') {
+        if (!fieldValue && !dateSecondValue) return;
+        if (fieldValue && dateSecondValue) {
+          const start = new Date(fieldValue);
+          const end = new Date(dateSecondValue);
+          if (start > end) return;
+        }
+      } else if (fieldValue === null) {
+        return;
       }
-    } else if (fieldValue === null) {
-      return;
     }
 
     const existingFilterIndex = activeFilters.findIndex(
@@ -167,50 +172,53 @@ export const TicketMetadataFilter = ({
     let numericFilter: NumericFilterValue | undefined;
     let dateFilter: DateFilterValue | undefined;
 
-    if (selectedFieldType.value_type === 'text') {
-      // For text fields, we'll use the value directly and handle trigram search in the query
-      // No special filter object needed as we'll use the ILIKE operator with the GIN index
-    } else if (selectedFieldType.value_type === 'fractional number' || selectedFieldType.value_type === 'natural number') {
-      numericFilter = {
-        mode: numericMode,
-        value: Number(fieldValue),
-        value2: numericMode === 'between' ? Number(secondValue) : null
-      };
-    } else if (selectedFieldType.value_type === 'date' || selectedFieldType.value_type === 'timestamp') {
-      if (dateMode === 'eq') {
-        dateFilter = {
-          mode: 'eq',
-          value: fieldValue,
-          value2: null
+    if (!isMissingFilter) {
+      if (selectedFieldType.value_type === 'text') {
+        // For text fields, we'll use the value directly and handle trigram search in the query
+        // No special filter object needed as we'll use the ILIKE operator with the GIN index
+      } else if (selectedFieldType.value_type === 'fractional number' || selectedFieldType.value_type === 'natural number') {
+        numericFilter = {
+          mode: numericMode,
+          value: Number(fieldValue),
+          value2: numericMode === 'between' ? Number(secondValue) : null
         };
-      } else if (fieldValue && dateSecondValue) {
-        dateFilter = {
-          mode: 'between',
-          value: fieldValue,
-          value2: dateSecondValue
-        };
-      } else if (fieldValue) {
-        dateFilter = {
-          mode: 'gt',
-          value: fieldValue,
-          value2: null
-        };
-      } else if (dateSecondValue) {
-        // When only "to" date is provided, treat it as "before"
-        dateFilter = {
-          mode: 'lt',
-          value: dateSecondValue,
-          value2: null
-        };
+      } else if (selectedFieldType.value_type === 'date' || selectedFieldType.value_type === 'timestamp') {
+        if (dateMode === 'eq') {
+          dateFilter = {
+            mode: 'eq',
+            value: fieldValue,
+            value2: null
+          };
+        } else if (fieldValue && dateSecondValue) {
+          dateFilter = {
+            mode: 'between',
+            value: fieldValue,
+            value2: dateSecondValue
+          };
+        } else if (fieldValue) {
+          dateFilter = {
+            mode: 'gt',
+            value: fieldValue,
+            value2: null
+          };
+        } else if (dateSecondValue) {
+          // When only "to" date is provided, treat it as "before"
+          dateFilter = {
+            mode: 'lt',
+            value: dateSecondValue,
+            value2: null
+          };
+        }
       }
     }
 
     const newFilter = {
       fieldType: selectedFieldType,
-      value: fieldValue || dateSecondValue, // Use either date for the base value
+      value: isMissingFilter ? null : (fieldValue || dateSecondValue), // Use either date for the base value
       columnName: VALUE_TYPE_TO_COLUMN[selectedFieldType.value_type as MetadataValueType],
       numericFilter,
-      dateFilter
+      dateFilter,
+      isMissingFilter
     };
 
     let newFilters;
@@ -232,11 +240,15 @@ export const TicketMetadataFilter = ({
     setNumericMode('eq');
     setDateMode('between');
     setDateSecondValue(null);
+    setIsMissingFilter(false);
     setIsPopoverOpen(false);
   };
 
   const isAddFilterDisabled = () => {
     if (!selectedFieldType || !isFilterEnabled) return true;
+
+    // If we're looking for missing fields, we can add the filter
+    if (isMissingFilter) return false;
 
     if (selectedFieldType.value_type === 'date' || selectedFieldType.value_type === 'timestamp') {
       // Require at least one date
@@ -276,6 +288,7 @@ export const TicketMetadataFilter = ({
     setNumericMode('eq');
     setDateMode('between');
     setDateSecondValue(null);
+    setIsMissingFilter(false);
   };
 
   const handleFieldTypeChange = (fieldTypeId: string) => {
@@ -283,43 +296,75 @@ export const TicketMetadataFilter = ({
     if (!type) return;
 
     setSelectedFieldType(type);
-    
-    // Check if there's an existing filter for this field type
-    const existingFilter = activeFilters.find(filter => filter.fieldType.id === fieldTypeId);
-    if (existingFilter) {
-      setFieldValue(existingFilter.value);
+    setFieldValue(null);
+    setIsMissingFilter(false);
+  };
+
+  const handleAddMissingFilter = (fieldType: MetadataFieldType) => {
+    const newFilter = {
+      fieldType,
+      value: null,
+      columnName: VALUE_TYPE_TO_COLUMN[fieldType.value_type as MetadataValueType],
+      isMissingFilter: true
+    };
+
+    const existingFilterIndex = activeFilters.findIndex(
+      filter => filter.fieldType.id === fieldType.id
+    );
+
+    let newFilters;
+    if (existingFilterIndex !== -1) {
+      newFilters = activeFilters.map((filter, index) => 
+        index === existingFilterIndex ? newFilter : filter
+      );
     } else {
-      setFieldValue(null);
+      newFilters = [...activeFilters, newFilter];
     }
+
+    setActiveFilters(newFilters);
+    onFilterChange(newFilters);
+
+    // Reset all inputs
+    setSelectedFieldType(null);
+    setFieldValue(null);
+    setSecondValue(null);
+    setNumericMode('eq');
+    setDateMode('between');
+    setDateSecondValue(null);
+    setIsMissingFilter(false);
+    setIsPopoverOpen(false);
   };
 
   const handleTagClick = (filter: MetadataFilter) => {
     setSelectedFieldType(filter.fieldType);
+    setIsMissingFilter(filter.isMissingFilter || false);
     
-    // Handle numeric filters
-    if (filter.numericFilter) {
-      const { mode, value, value2 } = filter.numericFilter;
-      setNumericMode(mode);
-      setFieldValue(value);
-      setSecondValue(value2);
-    } else {
-      // Handle non-numeric filters as before
-      setFieldValue(filter.value);
-      // Reset numeric filter state
-      setNumericMode('eq');
-      setSecondValue(null);
-    }
-    
-    // Handle date filters
-    if (filter.dateFilter) {
-      const { mode, value, value2 } = filter.dateFilter;
-      setDateMode(mode);
-      setFieldValue(value);
-      setDateSecondValue(value2);
-    } else {
-      // Reset date filter state
-      setDateMode('between');
-      setDateSecondValue(null);
+    if (!filter.isMissingFilter) {
+      // Handle numeric filters
+      if (filter.numericFilter) {
+        const { mode, value, value2 } = filter.numericFilter;
+        setNumericMode(mode);
+        setFieldValue(value);
+        setSecondValue(value2);
+      } else {
+        // Handle non-numeric filters as before
+        setFieldValue(filter.value);
+        // Reset numeric filter state
+        setNumericMode('eq');
+        setSecondValue(null);
+      }
+      
+      // Handle date filters
+      if (filter.dateFilter) {
+        const { mode, value, value2 } = filter.dateFilter;
+        setDateMode(mode);
+        setFieldValue(value);
+        setDateSecondValue(value2);
+      } else {
+        // Reset date filter state
+        setDateMode('between');
+        setDateSecondValue(null);
+      }
     }
     
     setIsPopoverOpen(true);
@@ -677,6 +722,10 @@ export const TicketMetadataFilter = ({
   };
 
   const getFilterDisplayValue = (filter: MetadataFilter) => {
+    if (filter.isMissingFilter) {
+      return 'missing';
+    }
+
     if (filter.numericFilter) {
       switch (filter.numericFilter.mode) {
         case 'eq':
@@ -761,11 +810,12 @@ export const TicketMetadataFilter = ({
                       fieldTypes={fieldTypes}
                       selectedFieldType={selectedFieldType}
                       onFieldTypeSelect={handleFieldTypeChange}
+                      onAddMissingFilter={handleAddMissingFilter}
                       isDisabled={!isFilterEnabled}
                     />
                   </FormControl>
 
-                  {selectedFieldType && (
+                  {selectedFieldType && !isMissingFilter && (
                     <FormControl>
                       <FormLabel>Value</FormLabel>
                       {renderValueInput()}
