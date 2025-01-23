@@ -72,16 +72,48 @@ export const CRMPage = () => {
 
       // Apply tag filters if any are selected
       if (selectedTags.length > 0) {
-        // First get the ticket IDs that have any of the selected tags
-        const { data: taggedTickets, error: tagError } = await supabase
-          .from('ticket_tags')
-          .select('ticket')
-          .in('tag', selectedTags);
+        // First get all selected tags with their types
+        const { data: selectedTagData, error: tagError } = await supabase
+          .from('tags')
+          .select(`
+            id,
+            type_id
+          `)
+          .in('id', selectedTags);
 
         if (tagError) throw tagError;
 
-        // Then filter the main query by these ticket IDs
-        query = query.in('id', (taggedTickets || []).map(t => t.ticket));
+        if (selectedTagData) {
+          // Group tags by type
+          const tagsByType = selectedTagData.reduce((acc, tag) => {
+            if (!acc[tag.type_id]) {
+              acc[tag.type_id] = [];
+            }
+            acc[tag.type_id].push(tag.id);
+            return acc;
+          }, {} as Record<string, string[]>);
+
+          // For each tag type, get tickets that have ANY of the tags of that type
+          const typeQueries = Object.values(tagsByType).map(async (tagIds) => {
+            const { data: ticketsWithTag } = await supabase
+              .from('ticket_tags')
+              .select('ticket')
+              .in('tag', tagIds);
+            
+            return (ticketsWithTag || []).map(t => t.ticket);
+          });
+
+          // Wait for all type queries and find tickets that have ALL required tag types
+          const ticketsByType = await Promise.all(typeQueries);
+          const matchingTickets = ticketsByType.reduce((acc, tickets) => {
+            if (acc === null) return tickets;
+            return acc.filter(id => tickets.includes(id));
+          }, null as string[] | null);
+
+          if (matchingTickets) {
+            query = query.in('id', matchingTickets);
+          }
+        }
       }
 
       query = query.order('created_at', { ascending: false });
