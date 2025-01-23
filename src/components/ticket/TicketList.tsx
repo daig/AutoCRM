@@ -6,10 +6,13 @@ import {
   useColorModeValue,
   Skeleton,
   SkeletonText,
+  Divider,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { TicketData } from '../../types/ticket';
 import { TicketTagFilter } from './TicketTagFilter';
+import { TicketMetadataFilter } from './TicketMetadataFilter';
+import type { MetadataFilter } from './TicketMetadataFilter';
 
 interface TicketListProps {
   tickets: TicketData[];
@@ -19,6 +22,7 @@ interface TicketListProps {
   onTagsChange: (tags: string[]) => void;
   isFilterEnabled: boolean;
   onFilterEnabledChange: (enabled: boolean) => void;
+  onMetadataFiltersChange: (filters: MetadataFilter[]) => void;
 }
 
 export const TicketList = ({ 
@@ -28,7 +32,8 @@ export const TicketList = ({
   selectedTags,
   onTagsChange,
   isFilterEnabled,
-  onFilterEnabledChange
+  onFilterEnabledChange,
+  onMetadataFiltersChange
 }: TicketListProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [displayedTickets, setDisplayedTickets] = useState(tickets);
@@ -67,12 +72,20 @@ export const TicketList = ({
   return (
     <Box>
       <Box p={4} borderBottom="1px" borderColor={borderColor}>
-        <TicketTagFilter
-          selectedTags={selectedTags}
-          onTagsChange={onTagsChange}
-          isFilterEnabled={isFilterEnabled}
-          onFilterEnabledChange={onFilterEnabledChange}
-        />
+        <VStack align="stretch" spacing={4}>
+          <TicketTagFilter
+            selectedTags={selectedTags}
+            onTagsChange={onTagsChange}
+            isFilterEnabled={isFilterEnabled}
+            onFilterEnabledChange={onFilterEnabledChange}
+          />
+          <Divider />
+          <TicketMetadataFilter
+            isFilterEnabled={isFilterEnabled}
+            onFilterChange={onMetadataFiltersChange}
+            onFilterEnabledChange={onFilterEnabledChange}
+          />
+        </VStack>
       </Box>
       <VStack spacing={0} align="stretch" w="100%">
         {isLoading ? (

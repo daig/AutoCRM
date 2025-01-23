@@ -8,6 +8,7 @@ import { supabase } from '../config/supabase';
 import { useUser } from '../context/UserContext';
 import type { TicketData } from '../types/ticket';
 import type { Database } from '../types/supabase';
+import type { MetadataFilter } from '../components/ticket/TicketMetadataFilter';
 import { useLocation } from 'react-router-dom';
 
 type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
@@ -17,6 +18,7 @@ export const CRMPage = () => {
   const [selectedTicket, setSelectedTicket] = useState<TicketData | null>(null);
   const [tickets, setTickets] = useState<TicketData[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [metadataFilters, setMetadataFilters] = useState<MetadataFilter[]>([]);
   const [isFilterEnabled, setIsFilterEnabled] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -70,42 +72,69 @@ export const CRMPage = () => {
           )
         `);
 
-      // Apply tag filters only if filtering is enabled
-      if (selectedTags.length > 0 && shouldApplyFilters) {
-        // First get all selected tags with their types
-        const { data: selectedTagData, error: tagError } = await supabase
-          .from('tags')
-          .select(`
-            id,
-            type_id
-          `)
-          .in('id', selectedTags);
+      if (shouldApplyFilters) {
+        // Apply tag filters
+        if (selectedTags.length > 0) {
+          // First get all selected tags with their types
+          const { data: selectedTagData, error: tagError } = await supabase
+            .from('tags')
+            .select(`
+              id,
+              type_id
+            `)
+            .in('id', selectedTags);
 
-        if (tagError) throw tagError;
+          if (tagError) throw tagError;
 
-        if (selectedTagData) {
-          // Group tags by type
-          const tagsByType = selectedTagData.reduce((acc, tag) => {
-            if (!acc[tag.type_id]) {
-              acc[tag.type_id] = [];
+          if (selectedTagData) {
+            // Group tags by type
+            const tagsByType = selectedTagData.reduce((acc, tag) => {
+              if (!acc[tag.type_id]) {
+                acc[tag.type_id] = [];
+              }
+              acc[tag.type_id].push(tag.id);
+              return acc;
+            }, {} as Record<string, string[]>);
+
+            // For each tag type, get tickets that have ANY of the tags of that type
+            const typeQueries = Object.values(tagsByType).map(async (tagIds) => {
+              const { data: ticketsWithTag } = await supabase
+                .from('ticket_tags')
+                .select('ticket')
+                .in('tag', tagIds);
+              
+              return (ticketsWithTag || []).map(t => t.ticket);
+            });
+
+            // Wait for all type queries and find tickets that have ALL required tag types
+            const ticketsByType = await Promise.all(typeQueries);
+            const matchingTickets = ticketsByType.reduce((acc, tickets) => {
+              if (acc === null) return tickets;
+              return acc.filter(id => tickets.includes(id));
+            }, null as string[] | null);
+
+            if (matchingTickets) {
+              query = query.in('id', matchingTickets);
             }
-            acc[tag.type_id].push(tag.id);
-            return acc;
-          }, {} as Record<string, string[]>);
+          }
+        }
 
-          // For each tag type, get tickets that have ANY of the tags of that type
-          const typeQueries = Object.values(tagsByType).map(async (tagIds) => {
-            const { data: ticketsWithTag } = await supabase
-              .from('ticket_tags')
+        // Apply metadata filters
+        if (metadataFilters.length > 0) {
+          // Get ticket IDs that match all metadata filters
+          const metadataQueries = metadataFilters.map(async (filter) => {
+            const valueField = `field_value_${filter.fieldType.value_type.replace(' ', '_')}`;
+            const { data } = await supabase
+              .from('ticket_metadata')
               .select('ticket')
-              .in('tag', tagIds);
+              .eq('field_type', filter.fieldType.id)
+              .eq(valueField, filter.value);
             
-            return (ticketsWithTag || []).map(t => t.ticket);
+            return (data || []).map(t => t.ticket);
           });
 
-          // Wait for all type queries and find tickets that have ALL required tag types
-          const ticketsByType = await Promise.all(typeQueries);
-          const matchingTickets = ticketsByType.reduce((acc, tickets) => {
+          const metadataResults = await Promise.all(metadataQueries);
+          const matchingTickets = metadataResults.reduce((acc, tickets) => {
             if (acc === null) return tickets;
             return acc.filter(id => tickets.includes(id));
           }, null as string[] | null);
@@ -124,7 +153,7 @@ export const CRMPage = () => {
     } catch (error) {
       console.error('Error fetching tickets:', error);
     }
-  }, [selectedTags]);
+  }, [selectedTags, metadataFilters]);
 
   const fetchTicketDetails = useCallback(async () => {
     if (!selectedTicketId) {
@@ -316,6 +345,7 @@ export const CRMPage = () => {
           onTagsChange={setSelectedTags}
           isFilterEnabled={isFilterEnabled}
           onFilterEnabledChange={handleFilterEnabledChange}
+          onMetadataFiltersChange={setMetadataFilters}
         />
       </GridItem>
     </Grid>
