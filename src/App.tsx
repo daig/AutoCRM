@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, Center, Spinner } from '@chakra-ui/react';
 import { theme } from './theme';
 import { Layout } from './components/Layout';
 import { CRMPage } from './pages/CRMPage';
@@ -10,8 +10,16 @@ import { UserProvider, useUser } from './context/UserContext';
 
 // Protected Route wrapper component
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated } = useUser();
+  const { isAuthenticated, isLoading } = useUser();
   const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <Center h="100vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -42,7 +50,7 @@ function App() {
                 </Layout>
               </ProtectedRoute>
             } />
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/crm" replace />} />
           </Routes>
         </Router>
       </UserProvider>
