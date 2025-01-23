@@ -133,8 +133,13 @@ export const CRMPage = () => {
               .select('ticket')
               .eq('field_type', filter.fieldType.id);
 
+            // Handle text fields with trigram search
+            if (filter.fieldType.value_type === 'text') {
+              // Use ILIKE with the GIN trigram index for text search
+              query = query.ilike(filter.columnName, `%${filter.value}%`);
+            }
             // Handle numeric filters
-            if (filter.numericFilter) {
+            else if (filter.numericFilter) {
               const { mode, value, value2 } = filter.numericFilter;
               if (value === null) return [];
 
@@ -158,8 +163,9 @@ export const CRMPage = () => {
                   }
                   break;
               }
-            } else if (filter.dateFilter) {
-              // Handle date/timestamp filters
+            }
+            // Handle date/timestamp filters
+            else if (filter.dateFilter) {
               const { mode, value, value2 } = filter.dateFilter;
               if (value === null) return [];
 
@@ -182,7 +188,7 @@ export const CRMPage = () => {
                   break;
               }
             } else {
-              // Handle non-numeric, non-date filters
+              // Handle non-numeric, non-date, non-text filters
               query = query.eq(filter.columnName, filter.value);
             }
             

@@ -167,7 +167,10 @@ export const TicketMetadataFilter = ({
     let numericFilter: NumericFilterValue | undefined;
     let dateFilter: DateFilterValue | undefined;
 
-    if (selectedFieldType.value_type === 'fractional number' || selectedFieldType.value_type === 'natural number') {
+    if (selectedFieldType.value_type === 'text') {
+      // For text fields, we'll use the value directly and handle trigram search in the query
+      // No special filter object needed as we'll use the ILIKE operator with the GIN index
+    } else if (selectedFieldType.value_type === 'fractional number' || selectedFieldType.value_type === 'natural number') {
       numericFilter = {
         mode: numericMode,
         value: Number(fieldValue),
@@ -322,6 +325,12 @@ export const TicketMetadataFilter = ({
     setIsPopoverOpen(true);
   };
 
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !isAddFilterDisabled()) {
+      handleAddFilter();
+    }
+  };
+
   const renderValueInput = () => {
     if (!selectedFieldType) return null;
 
@@ -329,9 +338,10 @@ export const TicketMetadataFilter = ({
       case 'text':
         return (
           <Input
-            placeholder="Enter text value"
+            placeholder="Contains text..."
             value={fieldValue || ''}
             onChange={(e) => setFieldValue(e.target.value)}
+            onKeyPress={handleKeyPress}
             isDisabled={!isFilterEnabled}
           />
         );
@@ -386,7 +396,7 @@ export const TicketMetadataFilter = ({
                   onChange={(value) => setFieldValue(value)}
                   isDisabled={!isFilterEnabled}
                 >
-                  <NumberInputField placeholder="Min value" />
+                  <NumberInputField placeholder="Min value" onKeyPress={handleKeyPress} />
                 </NumberInput>
                 <NumberInput
                   min={isNatural ? 0 : undefined}
@@ -394,7 +404,7 @@ export const TicketMetadataFilter = ({
                   onChange={(value) => setSecondValue(Number(value))}
                   isDisabled={!isFilterEnabled}
                 >
-                  <NumberInputField placeholder="Max value" />
+                  <NumberInputField placeholder="Max value" onKeyPress={handleKeyPress} />
                 </NumberInput>
               </HStack>
             ) : (
@@ -404,7 +414,7 @@ export const TicketMetadataFilter = ({
                 onChange={(value) => setFieldValue(value)}
                 isDisabled={!isFilterEnabled}
               >
-                <NumberInputField placeholder="Enter number" />
+                <NumberInputField placeholder="Enter number" onKeyPress={handleKeyPress} />
               </NumberInput>
             )}
           </VStack>
@@ -635,6 +645,7 @@ export const TicketMetadataFilter = ({
             placeholder="Select user"
             value={fieldValue || ''}
             onChange={(e) => setFieldValue(e.target.value)}
+            onKeyPress={handleKeyPress}
             isDisabled={!isFilterEnabled}
           >
             {users.map((user) => (
@@ -650,6 +661,7 @@ export const TicketMetadataFilter = ({
             placeholder="Select ticket"
             value={fieldValue || ''}
             onChange={(e) => setFieldValue(e.target.value)}
+            onKeyPress={handleKeyPress}
             isDisabled={!isFilterEnabled}
           >
             {tickets.map((ticket) => (
@@ -698,6 +710,8 @@ export const TicketMetadataFilter = ({
       }
     }
     switch (filter.fieldType.value_type) {
+      case 'text':
+        return `contains "${filter.value}"`;
       case 'boolean':
         return filter.value ? 'Yes' : 'No';
       case 'user':

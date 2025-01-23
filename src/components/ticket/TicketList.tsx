@@ -4,9 +4,8 @@ import {
   Text, 
   Badge, 
   useColorModeValue,
-  Skeleton,
-  SkeletonText,
   Divider,
+  Fade,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import type { TicketData } from '../../types/ticket';
@@ -35,39 +34,24 @@ export const TicketList = ({
   onFilterEnabledChange,
   onMetadataFiltersChange
 }: TicketListProps) => {
-  const [isLoading, setIsLoading] = useState(false);
   const [displayedTickets, setDisplayedTickets] = useState(tickets);
+  const [showContent, setShowContent] = useState(true);
   
   const hoverBg = useColorModeValue('gray.50', 'gray.700');
   const selectedBg = useColorModeValue('blue.50', 'blue.900');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
 
-  // Update displayed tickets when tickets prop changes
+  // Update displayed tickets when tickets prop changes or filters change
   useEffect(() => {
-    setDisplayedTickets(tickets);
-    setIsLoading(false);
-  }, [tickets]);
-
-  // Set loading state when filter changes
-  useEffect(() => {
-    if (selectedTags.length > 0 && isFilterEnabled) {
-      setIsLoading(true);
+    if (tickets !== displayedTickets) {
+      setShowContent(false);
+      const timer = setTimeout(() => {
+        setDisplayedTickets(tickets);
+        setTimeout(() => setShowContent(true), 50);
+      }, 200);
+      return () => clearTimeout(timer);
     }
-  }, [selectedTags, isFilterEnabled]);
-
-  const TicketSkeleton = () => (
-    <Box
-      p={4}
-      borderBottom="1px"
-      borderColor={borderColor}
-    >
-      <Skeleton height="24px" width="60%" mb={2} />
-      <SkeletonText noOfLines={2} spacing={2} />
-      <Box mt={2}>
-        <Skeleton height="20px" width="100px" />
-      </Box>
-    </Box>
-  );
+  }, [tickets, displayedTickets]);
 
   return (
     <Box>
@@ -88,14 +72,8 @@ export const TicketList = ({
         </VStack>
       </Box>
       <VStack spacing={0} align="stretch" w="100%">
-        {isLoading ? (
-          <>
-            <TicketSkeleton />
-            <TicketSkeleton />
-            <TicketSkeleton />
-          </>
-        ) : (
-          displayedTickets.map((ticket) => (
+        <Fade in={showContent} transition={{ enter: { duration: 0.2 }, exit: { duration: 0.15 } }}>
+          {displayedTickets.map((ticket) => (
             <Box
               key={ticket.id}
               p={4}
@@ -122,8 +100,8 @@ export const TicketList = ({
                 ))}
               </Box>
             </Box>
-          ))
-        )}
+          ))}
+        </Fade>
       </VStack>
     </Box>
   );
