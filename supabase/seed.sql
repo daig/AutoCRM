@@ -26,4 +26,8 @@ VALUES
     ('assigned', 'user', 'User assigned to handle this ticket'),
     ('due_date', 'date', 'Date by which this ticket should be resolved'),
     ('estimated_hours', 'natural number', 'Estimated hours to resolve this ticket'),
-    ('cost', 'fractional number', 'Estimated cost to resolve this ticket'); 
+    ('cost', 'fractional number', 'Estimated cost to resolve this ticket'),
+    ('notes', 'text', 'Additional text notes about the ticket'),
+    ('is_billable', 'boolean', 'Whether this ticket is billable to the customer'),
+    ('last_activity', 'timestamp', 'Timestamp of the last activity on this ticket'),
+    ('blocked_by', 'ticket', 'Reference to a ticket that is blocking this one'); 

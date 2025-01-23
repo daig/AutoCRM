@@ -8,7 +8,7 @@ import {
   Icon,
   useColorModeValue,
 } from '@chakra-ui/react';
-import { FiFilter, FiUser, FiTag, FiCalendar, FiClock, FiToggleLeft, FiHash, FiType, FiDollarSign } from 'react-icons/fi';
+import { FiFilter, FiUser, FiTag, FiCalendar, FiClock, FiToggleLeft, FiHash, FiType, FiPercent } from 'react-icons/fi';
 
 export interface MetadataFieldType {
   id: string;
@@ -31,7 +31,7 @@ const getFieldTypeIcon = (valueType: string) => {
     case 'natural number':
       return FiHash;
     case 'fractional number':
-      return FiDollarSign;
+      return FiPercent;
     case 'boolean':
       return FiToggleLeft;
     case 'date':
@@ -75,7 +75,6 @@ export const MetadataFieldTypeSelector = ({
                 <Icon as={IconComponent} color={isSelected ? 'blue.500' : 'gray.500'} />
                 <VStack align="start" spacing={0}>
                   <Text fontSize="sm" fontWeight="medium">{type.name}</Text>
-                  <Text fontSize="xs" color="gray.500">{type.value_type}</Text>
                 </VStack>
               </HStack>
             </CardBody>

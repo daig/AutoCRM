@@ -120,7 +120,8 @@ export const MetadataSelector = ({ ticketId, existingMetadata, onMetadataAdded }
           metadata.field_value_date = fieldValue;
           break;
         case 'timestamp':
-          metadata.field_value_timestamp = fieldValue;
+          // Convert local datetime-local value to UTC ISO string
+          metadata.field_value_timestamp = new Date(fieldValue).toISOString();
           break;
         case 'user':
           metadata.field_value_user = fieldValue;

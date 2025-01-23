@@ -42,6 +42,20 @@ const formatDate = (dateStr: string) => {
   return dateStr.split(/[T\s]/)[0];
 };
 
+// Add utility function for formatting timestamps with timezone
+const formatTimestamp = (timestamp: string) => {
+  // Create a date object from the UTC timestamp and format it in local time
+  const date = new Date(timestamp);
+  return date.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+};
+
 export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
   const toast = useToast();
   const navigate = useNavigate();
@@ -231,7 +245,7 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
                     field.field_value_float?.toString() ||
                     (field.field_value_bool !== null ? (field.field_value_bool ? 'Yes' : 'No') : '') ||
                     (field.field_value_date ? formatDate(field.field_value_date) : '') ||
-                    (field.field_value_timestamp ? new Date(field.field_value_timestamp).toLocaleString() : '') ||
+                    (field.field_value_timestamp ? formatTimestamp(field.field_value_timestamp) : '') ||
                     field.field_value_user?.full_name ||
                     field.field_value_ticket?.title ||
                     'N/A'}
