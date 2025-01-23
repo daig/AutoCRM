@@ -31,7 +31,7 @@ import {
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
-import { FiFilter, FiEdit2, FiUser, FiTag, FiCalendar, FiClock, FiToggleLeft, FiHash, FiType, FiDollarSign, FiTarget } from 'react-icons/fi';
+import { FiFilter, FiEdit2, FiCalendar, FiClock } from 'react-icons/fi';
 import { TbEqual, TbMathGreater, TbMathLower, TbArrowsHorizontal } from 'react-icons/tb';
 import { MetadataFieldTypeSelector } from '../metadata/MetadataFieldTypeSelector';
 import type { MetadataFieldType } from '../metadata/MetadataFieldTypeSelector';
@@ -84,29 +84,6 @@ const formatDateValue = (date: string | null) => {
   if (!date) return '';
   // Just return the date string as is - it's already in YYYY-MM-DD format
   return date;
-};
-
-const getFieldTypeIcon = (valueType: MetadataValueType) => {
-  switch (valueType) {
-    case 'text':
-      return FiType;
-    case 'natural number':
-      return FiHash;
-    case 'fractional number':
-      return FiDollarSign;
-    case 'boolean':
-      return FiToggleLeft;
-    case 'date':
-      return FiCalendar;
-    case 'timestamp':
-      return FiClock;
-    case 'user':
-      return FiUser;
-    case 'ticket':
-      return FiTag;
-    default:
-      return FiFilter;
-  }
 };
 
 export const TicketMetadataFilter = ({ 
