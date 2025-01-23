@@ -31,16 +31,31 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
 import { FiFilter, FiEdit2 } from 'react-icons/fi';
 
+// Export the mapping for use in parent components
+export const VALUE_TYPE_TO_COLUMN = {
+  'text': 'field_value_text',
+  'natural number': 'field_value_int',
+  'fractional number': 'field_value_float',
+  'boolean': 'field_value_bool',
+  'date': 'field_value_date',
+  'timestamp': 'field_value_timestamp',
+  'user': 'field_value_user',
+  'ticket': 'field_value_ticket'
+} as const;
+
+export type MetadataValueType = keyof typeof VALUE_TYPE_TO_COLUMN;
+
 interface MetadataFieldType {
   id: string;
   name: string;
-  value_type: string;
+  value_type: MetadataValueType;  // Update this to use the type
   description: string | null;
 }
 
 export interface MetadataFilter {
   fieldType: MetadataFieldType;
   value: any;
+  columnName?: string; // Add this to help parent component know which column to filter on
 }
 
 interface TicketMetadataFilterProps {
@@ -117,20 +132,21 @@ export const TicketMetadataFilter = ({
       filter => filter.fieldType.id === selectedFieldType.id
     );
 
+    const newFilter = {
+      fieldType: selectedFieldType,
+      value: fieldValue,
+      columnName: VALUE_TYPE_TO_COLUMN[selectedFieldType.value_type as MetadataValueType]
+    };
+
     let newFilters;
     if (existingFilterIndex !== -1) {
       // Update existing filter
       newFilters = activeFilters.map((filter, index) => 
-        index === existingFilterIndex 
-          ? { ...filter, value: fieldValue }
-          : filter
+        index === existingFilterIndex ? newFilter : filter
       );
     } else {
       // Add new filter
-      newFilters = [...activeFilters, {
-        fieldType: selectedFieldType,
-        value: fieldValue,
-      }];
+      newFilters = [...activeFilters, newFilter];
     }
 
     setActiveFilters(newFilters);

@@ -123,12 +123,15 @@ export const CRMPage = () => {
         if (metadataFilters.length > 0) {
           // Get ticket IDs that match all metadata filters
           const metadataQueries = metadataFilters.map(async (filter) => {
-            const valueField = `field_value_${filter.fieldType.value_type.replace(' ', '_')}`;
+            if (!filter.columnName) {
+              console.error('Missing columnName in filter:', filter);
+              return [];
+            }
             const { data } = await supabase
               .from('ticket_metadata')
               .select('ticket')
               .eq('field_type', filter.fieldType.id)
-              .eq(valueField, filter.value);
+              .eq(filter.columnName, filter.value);
             
             return (data || []).map(t => t.ticket);
           });
