@@ -19,7 +19,6 @@ import {
   Switch,
   Tooltip,
   Input,
-  Divider,
 } from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';

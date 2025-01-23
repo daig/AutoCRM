@@ -2,7 +2,6 @@ import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue } from 
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
 import { MessageFeed, MessageFeedHandle, Message } from '../components/ticket/MessageFeed';
-import { TicketTagFilter } from '../components/ticket/TicketTagFilter';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowForwardIcon } from '@chakra-ui/icons';
 import { supabase } from '../config/supabase';
