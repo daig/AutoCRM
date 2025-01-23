@@ -28,19 +28,19 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const { data: userId, error } = await supabase.rpc('verify_user_login', {
-        login_email: formData.email,
-        login_password: formData.password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       });
 
       if (error) throw error;
       
-      if (!userId) {
+      if (!data.user) {
         throw new Error('Invalid email or password');
       }
 
       // Store the userId in context
-      setUserId(userId);
+      setUserId(data.user.id);
 
       toast({
         title: 'Login successful',
