@@ -1,6 +1,26 @@
-import { Box, Heading, Checkbox, VStack, Text, useColorModeValue } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverBody,
+  PopoverHeader,
+  PopoverFooter,
+  Checkbox,
+  VStack,
+  Text,
+  useColorModeValue,
+  HStack,
+  Divider,
+  Icon,
+  Tag,
+  Wrap,
+  WrapItem,
+} from '@chakra-ui/react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
+import { FiFilter } from 'react-icons/fi';
 
 interface Tag {
   id: string;
@@ -64,31 +84,92 @@ export const TicketTagFilter = ({ selectedTags, onTagsChange }: TicketTagFilterP
     onTagsChange(newSelectedTags);
   };
 
+  const getTagById = (tagId: string) => {
+    for (const type of tagTypes) {
+      const tag = type.tags.find(t => t.id === tagId);
+      if (tag) return tag;
+    }
+    return null;
+  };
+
   if (loading) {
     return <Text p={4}>Loading filters...</Text>;
   }
 
   return (
-    <Box p={4} borderBottom="1px" borderColor={borderColor}>
-      <Heading size="sm" mb={4}>Filter by Tags</Heading>
-      <VStack align="stretch" spacing={4}>
-        {tagTypes.map((type) => (
-          <Box key={type.id}>
-            <Text fontWeight="medium" mb={2}>{type.name}</Text>
-            <VStack align="stretch" pl={2}>
-              {type.tags.map((tag) => (
-                <Checkbox
-                  key={tag.id}
-                  isChecked={selectedTags.includes(tag.id)}
-                  onChange={() => handleTagToggle(tag.id)}
+    <Box>
+      <HStack spacing={2} mb={4}>
+        <Popover placement="bottom-start">
+          <PopoverTrigger>
+            <Button
+              leftIcon={<Icon as={FiFilter} />}
+              size="sm"
+              variant="outline"
+            >
+              Filter
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent maxW="300px">
+            <PopoverHeader fontWeight="semibold" borderBottom="1px" borderColor={borderColor}>
+              Filter by Tags
+            </PopoverHeader>
+            <PopoverBody maxH="400px" overflowY="auto">
+              <VStack align="stretch" spacing={4} divider={<Divider />}>
+                {tagTypes.map((type) => (
+                  <Box key={type.id}>
+                    <Text fontWeight="medium" mb={2} color="gray.600">
+                      {type.name}
+                    </Text>
+                    <VStack align="stretch" pl={2}>
+                      {type.tags.map((tag) => (
+                        <Checkbox
+                          key={tag.id}
+                          isChecked={selectedTags.includes(tag.id)}
+                          onChange={() => handleTagToggle(tag.id)}
+                          size="sm"
+                        >
+                          {tag.name}
+                        </Checkbox>
+                      ))}
+                    </VStack>
+                  </Box>
+                ))}
+              </VStack>
+            </PopoverBody>
+            <PopoverFooter borderTop="1px" borderColor={borderColor}>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onTagsChange([])}
+                isDisabled={selectedTags.length === 0}
+              >
+                Clear Filters
+              </Button>
+            </PopoverFooter>
+          </PopoverContent>
+        </Popover>
+
+        {/* Show selected tags */}
+        <Wrap spacing={2}>
+          {selectedTags.map((tagId) => {
+            const tag = getTagById(tagId);
+            if (!tag) return null;
+            return (
+              <WrapItem key={tagId}>
+                <Tag
+                  size="sm"
+                  variant="subtle"
+                  colorScheme={tag.tag_type.name === 'status' ? 'green' : 'blue'}
+                  cursor="pointer"
+                  onClick={() => handleTagToggle(tagId)}
                 >
                   {tag.name}
-                </Checkbox>
-              ))}
-            </VStack>
-          </Box>
-        ))}
-      </VStack>
+                </Tag>
+              </WrapItem>
+            );
+          })}
+        </Wrap>
+      </HStack>
     </Box>
   );
 }; 

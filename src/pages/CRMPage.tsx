@@ -270,17 +270,13 @@ export const CRMPage = () => {
 
       {/* Right Sidebar - Ticket List */}
       <GridItem borderLeft="1px" borderColor={borderColor} overflowY="auto">
-        <TicketTagFilter
+        <TicketList
+          tickets={tickets}
+          onSelectTicket={setSelectedTicketId}
+          selectedTicketId={selectedTicketId}
           selectedTags={selectedTags}
           onTagsChange={setSelectedTags}
         />
-        <Box>
-          <TicketList
-            tickets={tickets}
-            onSelectTicket={setSelectedTicketId}
-            selectedTicketId={selectedTicketId}
-          />
-        </Box>
       </GridItem>
     </Grid>
   );
