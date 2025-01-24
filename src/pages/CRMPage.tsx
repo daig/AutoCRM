@@ -47,6 +47,15 @@ export const CRMPage = () => {
 
   const fetchTickets = useCallback(async (shouldApplyFilters = isFilterEnabled) => {
     try {
+      // First get the user's teams
+      const { data: userTeams, error: teamsError } = await supabase
+        .from('user_teams')
+        .select('team_id')
+        .eq('user_id', userId);
+
+      if (teamsError) throw teamsError;
+      const userTeamIds = (userTeams || []).map(t => t.team_id).filter(Boolean) as string[];
+
       let query = supabase
         .from('tickets')
         .select(`
@@ -71,6 +80,12 @@ export const CRMPage = () => {
             field_value_ticket:tickets!ticket_metadata_field_value_ticket_fkey (title)
           )
         `);
+
+      // Add team and creator filters
+      if (userTeamIds.length > 0) {
+        query = query.in('team', userTeamIds);
+      }
+      query = query.or(`creator.eq.${userId}`);
 
       if (shouldApplyFilters) {
         // Apply tag filters
@@ -236,7 +251,7 @@ export const CRMPage = () => {
     } catch (error) {
       console.error('Error fetching tickets:', error);
     }
-  }, [selectedTags, metadataFilters]);
+  }, [selectedTags, metadataFilters, isFilterEnabled, userId]);
 
   const fetchTicketDetails = useCallback(async () => {
     if (!selectedTicketId) {
@@ -251,6 +266,10 @@ export const CRMPage = () => {
         creator:users!tickets_creator_fkey (
           id,
           full_name
+        ),
+        team:teams (
+          id,
+          name
         ),
         tags:ticket_tags (
           tag (

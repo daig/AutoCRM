@@ -283,7 +283,7 @@ export type Database = {
           creator: string
           description: string | null
           id: string
-          team: string | null
+          team: string
           title: string
           updated_at: string | null
         }
@@ -292,7 +292,7 @@ export type Database = {
           creator?: string
           description?: string | null
           id?: string
-          team?: string | null
+          team?: string
           title: string
           updated_at?: string | null
         }
@@ -301,7 +301,7 @@ export type Database = {
           creator?: string
           description?: string | null
           id?: string
-          team?: string | null
+          team?: string
           title?: string
           updated_at?: string | null
         }
@@ -387,6 +387,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      gen_namespace_v5: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_triage_team_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       gtrgm_compress: {
         Args: {
           "": unknown

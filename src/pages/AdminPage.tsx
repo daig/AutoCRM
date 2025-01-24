@@ -11,6 +11,7 @@ import { TagManagement } from '../components/admin/TagManagement';
 import { MetadataFieldManagement } from '../components/admin/MetadataFieldManagement';
 import { TeamManagement } from '../components/admin/TeamManagement';
 import { UserManagement } from '../components/admin/UserManagement';
+import { TicketManagement } from '../components/admin/TicketManagement';
 
 const AdminPage: React.FC = () => {
   const userManagementRef = useRef<{ refreshUsers: () => void } | null>(null);
@@ -25,6 +26,7 @@ const AdminPage: React.FC = () => {
         <TabList>
           <Tab>Users</Tab>
           <Tab>Teams</Tab>
+          <Tab>Tickets</Tab>
           <Tab>Tags</Tab>
           <Tab>Metadata Fields</Tab>
         </TabList>
@@ -35,6 +37,9 @@ const AdminPage: React.FC = () => {
           </TabPanel>
           <TabPanel>
             <TeamManagement onTeamMembershipChange={handleTeamMembershipChange} />
+          </TabPanel>
+          <TabPanel>
+            <TicketManagement />
           </TabPanel>
           <TabPanel>
             <TagManagement />

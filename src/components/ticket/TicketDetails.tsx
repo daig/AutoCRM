@@ -184,6 +184,9 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
           <Text color="gray.500" fontSize="sm">
             Created by: {ticket.creator.full_name}
           </Text>
+          <Text color="gray.500" fontSize="sm">
+            Team: {ticket.team?.name || 'No team assigned'}
+          </Text>
         </Box>
         <IconButton
           aria-label="Delete ticket"

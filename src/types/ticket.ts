@@ -8,6 +8,10 @@ export interface TicketData {
     id: string;
     full_name: string;
   };
+  team: {
+    id: string;
+    name: string;
+  } | null;
   tags: {
     tag: {
       id: string;

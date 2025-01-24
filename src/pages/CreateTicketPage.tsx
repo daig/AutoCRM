@@ -59,7 +59,7 @@ export const CreateTicketPage = () => {
           {
             title: formData.title,
             description: formData.description,
-            creator: userId
+            creator: userId,
           },
         ])
         .select()
