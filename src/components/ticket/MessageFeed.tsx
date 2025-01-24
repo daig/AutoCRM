@@ -24,7 +24,6 @@ export interface MessageFeedHandle {
 export const MessageFeed = forwardRef<MessageFeedHandle, MessageFeedProps>(({ ticketId }, ref) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const messageBg = useColorModeValue('gray.50', 'gray.700');
   const customerBg = useColorModeValue('blue.50', 'blue.900');
   const agentBg = useColorModeValue('green.50', 'green.900');
 

@@ -544,11 +544,11 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({
               <Tr>
                 <Th>
                   <Checkbox
-                    isChecked={selectedTeam && teamMembers[selectedTeam]?.length > 0 && 
-                      selectedMembers.size === teamMembers[selectedTeam].length}
-                    isIndeterminate={selectedMembers.size > 0 && 
+                    isChecked={Boolean(selectedTeam && teamMembers[selectedTeam]?.length > 0 && 
+                      selectedMembers.size === teamMembers[selectedTeam].length)}
+                    isIndeterminate={Boolean(selectedMembers.size > 0 && 
                       selectedTeam && 
-                      teamMembers[selectedTeam]?.length > selectedMembers.size}
+                      teamMembers[selectedTeam]?.length > selectedMembers.size)}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSelectAllMembers(e.target.checked)}
                   />
                 </Th>

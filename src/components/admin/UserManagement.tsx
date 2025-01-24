@@ -53,15 +53,6 @@ interface Team {
   name: string;
 }
 
-interface Skill {
-  id: string;
-  name: string;
-  proficiencies: {
-    id: string;
-    name: string;
-  }[];
-}
-
 interface AgentSkill {
   proficiency: {
     id: string;
