@@ -31,13 +31,11 @@ interface User {
     id: string;
     title: string;
   }[];
-  assigned_teams: {
-    team: {
-      id: string;
-      name: string;
-    };
-    is_team_lead: boolean;
-  }[];
+  team: {
+    id: string;
+    name: string;
+  } | null;
+  is_team_lead: boolean;
 }
 
 export interface UserManagementRef {
@@ -58,10 +56,7 @@ export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
         .select(`
           *,
           created_tickets:tickets(id, title),
-          assigned_teams:user_teams(
-            is_team_lead,
-            team:teams(id, name)
-          )
+          team:teams(id, name)
         `);
 
       if (error) throw error;
@@ -134,7 +129,7 @@ export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
           <Tr>
             <Th>Name</Th>
             <Th>Role</Th>
-            <Th>Teams</Th>
+            <Th>Team</Th>
             <Th>Created Tickets</Th>
             <Th>Actions</Th>
           </Tr>
@@ -156,16 +151,15 @@ export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
                 </Select>
               </Td>
               <Td>
-                {user.assigned_teams.map((team) => (
+                {user.team && (
                   <Badge
-                    key={team.team.id}
-                    colorScheme={team.is_team_lead ? 'green' : 'blue'}
+                    colorScheme={user.is_team_lead ? 'green' : 'blue'}
                     mr={2}
                     mb={1}
                   >
-                    {team.team.name} {team.is_team_lead && '(Lead)'}
+                    {user.team.name} {user.is_team_lead && '(Lead)'}
                   </Badge>
-                ))}
+                )}
               </Td>
               <Td>{user.created_tickets.length}</Td>
               <Td>
@@ -209,8 +203,8 @@ export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
                   <Text color="gray.500">No tickets created</Text>
                 )}
 
-                <Text fontWeight="bold" mt={4} mb={2}>Team Memberships:</Text>
-                {selectedUser.assigned_teams.length > 0 ? (
+                <Text fontWeight="bold" mt={4} mb={2}>Team:</Text>
+                {selectedUser.team ? (
                   <Table variant="simple" size="sm">
                     <Thead>
                       <Tr>
@@ -219,16 +213,14 @@ export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {selectedUser.assigned_teams.map((team) => (
-                        <Tr key={team.team.id}>
-                          <Td>{team.team.name}</Td>
-                          <Td>{team.is_team_lead ? 'Team Lead' : 'Member'}</Td>
-                        </Tr>
-                      ))}
+                      <Tr>
+                        <Td>{selectedUser.team.name}</Td>
+                        <Td>{selectedUser.is_team_lead ? 'Team Lead' : 'Member'}</Td>
+                      </Tr>
                     </Tbody>
                   </Table>
                 ) : (
-                  <Text color="gray.500">No team memberships</Text>
+                  <Text color="gray.500">No team membership</Text>
                 )}
               </Box>
             )}

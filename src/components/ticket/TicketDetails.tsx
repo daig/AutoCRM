@@ -74,10 +74,10 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
 
       try {
         const { data, error } = await supabase
-          .from('user_teams')
+          .from('users')
           .select('is_team_lead')
           .eq('team_id', ticket.team.id)
-          .eq('user_id', userId)
+          .eq('id', userId)
           .single();
 
         if (error) throw error;

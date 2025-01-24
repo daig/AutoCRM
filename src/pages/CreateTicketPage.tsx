@@ -53,6 +53,15 @@ export const CreateTicketPage = () => {
     }
 
     try {
+      // First get the user's team
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('team_id')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
       const { data, error } = await supabase
         .from('tickets')
         .insert([
@@ -60,6 +69,7 @@ export const CreateTicketPage = () => {
             title: formData.title,
             description: formData.description,
             creator: userId,
+            team: userData?.team_id || null, // Use the user's team or null if they don't have one
           },
         ])
         .select()

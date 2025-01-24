@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { CreateTicketPage } from './pages/CreateTicketPage';
 import AdminPage from './pages/AdminPage';
+import { HomePage } from './pages/HomePage';
 import { UserProvider, useUser } from './context/UserContext';
 
 // Protected Route wrapper component
@@ -82,7 +83,13 @@ function App() {
                 </Layout>
               </AdminRoute>
             } />
-            <Route path="/" element={<Navigate to="/crm" replace />} />
+            <Route path="/" element={
+              <ProtectedRoute>
+                <Layout>
+                  <HomePage />
+                </Layout>
+              </ProtectedRoute>
+            } />
           </Routes>
         </Router>
       </UserProvider>

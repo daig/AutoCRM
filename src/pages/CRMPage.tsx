@@ -47,14 +47,15 @@ export const CRMPage = () => {
 
   const fetchTickets = useCallback(async (shouldApplyFilters = isFilterEnabled) => {
     try {
-      // First get the user's teams
-      const { data: userTeams, error: teamsError } = await supabase
-        .from('user_teams')
+      // First get the user's team
+      const { data: userData, error: userError } = await supabase
+        .from('users')
         .select('team_id')
-        .eq('user_id', userId);
+        .eq('id', userId)
+        .single();
 
-      if (teamsError) throw teamsError;
-      const userTeamIds = (userTeams || []).map(t => t.team_id).filter(Boolean) as string[];
+      if (userError) throw userError;
+      const userTeamId = userData?.team_id;
 
       let query = supabase
         .from('tickets')
@@ -81,11 +82,8 @@ export const CRMPage = () => {
           )
         `);
 
-      // Add team and creator filters
-      if (userTeamIds.length > 0) {
-        query = query.in('team', userTeamIds);
-      }
-      query = query.or(`creator.eq.${userId}`);
+      // Add team and creator filters - show tickets where user is either on the team or is the creator
+      query = query.or(`team.eq.${userTeamId}${userTeamId ? ',' : ''}creator.eq.${userId}`);
 
       if (shouldApplyFilters) {
         // Apply tag filters

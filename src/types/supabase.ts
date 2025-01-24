@@ -322,65 +322,40 @@ export type Database = {
           },
         ]
       }
-      user_teams: {
-        Row: {
-          created_at: string | null
-          id: string
-          is_team_lead: boolean
-          team_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          is_team_lead?: boolean
-          team_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          is_team_lead?: boolean
-          team_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_teams_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_teams_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       users: {
         Row: {
           created_at: string | null
           full_name: string | null
           id: string
+          is_team_lead: boolean
           role: "administrator" | "agent" | "customer"
+          team_id: string | null
         }
         Insert: {
           created_at?: string | null
           full_name?: string | null
           id: string
+          is_team_lead?: boolean
           role?: "administrator" | "agent" | "customer"
+          team_id?: string | null
         }
         Update: {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          is_team_lead?: boolean
           role?: "administrator" | "agent" | "customer"
+          team_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -37,12 +37,8 @@ interface Team {
 
 interface TeamMember {
   id: string;
-  user_id: string;
-  team_id: string;
+  full_name: string | null;
   is_team_lead: boolean;
-  user: {
-    full_name: string | null;
-  };
 }
 
 interface TeamManagementProps {
@@ -71,8 +67,8 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
 
   const fetchTeamMembers = async (teamId: string) => {
     const { data, error } = await supabase
-      .from('user_teams')
-      .select('*, user:users(full_name)')
+      .from('users')
+      .select('id, full_name, is_team_lead')
       .eq('team_id', teamId);
 
     if (error) {
@@ -90,6 +86,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name')
+      .is('team_id', null)
       .order('full_name');
 
     if (error) {
@@ -138,7 +135,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
   const handleDeleteTeam = async (id: string) => {
     // First check if team has members
     const { data: members, error: checkError } = await supabase
-      .from('user_teams')
+      .from('users')
       .select('id')
       .eq('team_id', id);
 
@@ -176,33 +173,20 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
       return;
     }
 
-    // Check if user is already in the team
-    const { data: existingMember, error: checkError } = await supabase
-      .from('user_teams')
-      .select('id')
-      .eq('team_id', selectedTeam)
-      .eq('user_id', selectedUser)
-      .single();
-
-    if (existingMember) {
-      toast({ 
-        title: 'User is already a member of this team',
-        status: 'error',
-        duration: 3000
-      });
-      return;
-    }
-
-    // If adding as team lead, check if there's already a team lead
+    // If making someone a team lead, check if there's already one
     if (isTeamLead) {
-      const { data: existingLead, error: leadCheckError } = await supabase
-        .from('user_teams')
+      const { data: existingLeads, error: leadCheckError } = await supabase
+        .from('users')
         .select('id')
         .eq('team_id', selectedTeam)
-        .eq('is_team_lead', true)
-        .single();
+        .eq('is_team_lead', true);
 
-      if (existingLead) {
+      if (leadCheckError) {
+        toast({ title: 'Error checking team lead status', status: 'error', duration: 3000 });
+        return;
+      }
+
+      if (existingLeads && existingLeads.length > 0) {
         toast({
           title: 'Team lead already exists',
           description: 'Please remove the current team lead before assigning a new one',
@@ -213,11 +197,13 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
       }
     }
 
-    const { error } = await supabase.from('user_teams').insert([{
-      team_id: selectedTeam,
-      user_id: selectedUser,
-      is_team_lead: isTeamLead,
-    }]);
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        team_id: selectedTeam,
+        is_team_lead: isTeamLead 
+      })
+      .eq('id', selectedUser);
 
     if (error) {
       toast({ title: 'Error adding team member', status: 'error', duration: 3000 });
@@ -226,6 +212,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
 
     toast({ title: 'Team member added', status: 'success', duration: 3000 });
     fetchTeamMembers(selectedTeam);
+    fetchAvailableUsers();
     onTeamMembershipChange?.();
     onClose();
     setSelectedUser('');
@@ -233,29 +220,13 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
   };
 
   const handleRemoveMember = async (userId: string, teamId: string) => {
-    // Check if this is the last team lead
-    const { data: member, error: checkError } = await supabase
-      .from('user_teams')
-      .select('is_team_lead')
-      .eq('user_id', userId)
-      .eq('team_id', teamId)
-      .single();
-
-    if (member?.is_team_lead) {
-      toast({
-        title: 'Cannot remove team lead',
-        description: 'Please assign a new team lead before removing the current one',
-        status: 'error',
-        duration: 3000
-      });
-      return;
-    }
-
     const { error } = await supabase
-      .from('user_teams')
-      .delete()
-      .eq('user_id', userId)
-      .eq('team_id', teamId);
+      .from('users')
+      .update({ 
+        team_id: null,
+        is_team_lead: false 
+      })
+      .eq('id', userId);
 
     if (error) {
       toast({ title: 'Error removing team member', status: 'error', duration: 3000 });
@@ -264,20 +235,25 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
 
     toast({ title: 'Team member removed', status: 'success', duration: 3000 });
     fetchTeamMembers(teamId);
+    fetchAvailableUsers();
     onTeamMembershipChange?.();
   };
 
   const handleToggleTeamLead = async (userId: string, teamId: string, currentStatus: boolean) => {
     // If making someone a team lead, check if there's already one
     if (!currentStatus) {
-      const { data: existingLead, error: leadCheckError } = await supabase
-        .from('user_teams')
+      const { data: existingLeads, error: leadCheckError } = await supabase
+        .from('users')
         .select('id')
         .eq('team_id', teamId)
-        .eq('is_team_lead', true)
-        .single();
+        .eq('is_team_lead', true);
 
-      if (existingLead) {
+      if (leadCheckError) {
+        toast({ title: 'Error checking team lead status', status: 'error', duration: 3000 });
+        return;
+      }
+
+      if (existingLeads && existingLeads.length > 0) {
         toast({
           title: 'Team lead already exists',
           description: 'Please remove the current team lead before assigning a new one',
@@ -289,10 +265,9 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
     }
 
     const { error } = await supabase
-      .from('user_teams')
+      .from('users')
       .update({ is_team_lead: !currentStatus })
-      .eq('user_id', userId)
-      .eq('team_id', teamId);
+      .eq('id', userId);
 
     if (error) {
       toast({ title: 'Error updating team lead status', status: 'error', duration: 3000 });
@@ -390,11 +365,11 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
             <Tbody>
               {teamMembers[selectedTeam]?.map((member) => (
                 <Tr key={member.id}>
-                  <Td>{member.user.full_name}</Td>
+                  <Td>{member.full_name}</Td>
                   <Td>
                     <Checkbox
                       isChecked={member.is_team_lead}
-                      onChange={() => handleToggleTeamLead(member.user_id, selectedTeam, member.is_team_lead)}
+                      onChange={() => handleToggleTeamLead(member.id, selectedTeam, member.is_team_lead)}
                     >
                       Team Lead
                     </Checkbox>
@@ -404,7 +379,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
                       aria-label="Remove member"
                       icon={<DeleteIcon />}
                       colorScheme="red"
-                      onClick={() => handleRemoveMember(member.user_id, selectedTeam)}
+                      onClick={() => handleRemoveMember(member.id, selectedTeam)}
                     />
                   </Td>
                 </Tr>
