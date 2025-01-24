@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Box,
   Text,
@@ -40,7 +40,11 @@ interface User {
   }[];
 }
 
-export const UserManagement = () => {
+export interface UserManagementRef {
+  refreshUsers: () => void;
+}
+
+export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -73,6 +77,10 @@ export const UserManagement = () => {
       setLoading(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    refreshUsers: fetchUsers
+  }));
 
   useEffect(() => {
     fetchUsers();
@@ -229,4 +237,4 @@ export const UserManagement = () => {
       </Modal>
     </Box>
   );
-}; 
+}); 

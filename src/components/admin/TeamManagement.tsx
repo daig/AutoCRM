@@ -26,7 +26,7 @@ import {
   Checkbox,
   HStack,
 } from '@chakra-ui/react';
-import { DeleteIcon, AddIcon, EditIcon } from '@chakra-ui/icons';
+import { DeleteIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../../config/supabase';
 
 interface Team {
@@ -45,7 +45,11 @@ interface TeamMember {
   };
 }
 
-export const TeamManagement = () => {
+interface TeamManagementProps {
+  onTeamMembershipChange?: () => void;
+}
+
+export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembershipChange }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
   const [availableUsers, setAvailableUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
@@ -107,13 +111,22 @@ export const TeamManagement = () => {
   }, [selectedTeam]);
 
   const handleCreateTeam = async () => {
+    if (!newTeam.name.trim()) {
+      toast({ title: 'Team name is required', status: 'error', duration: 3000 });
+      return;
+    }
+
     const { error } = await supabase.from('teams').insert([{
       name: newTeam.name,
       description: newTeam.description || null,
     }]);
 
     if (error) {
-      toast({ title: 'Error creating team', status: 'error', duration: 3000 });
+      let errorMessage = 'Error creating team';
+      if (error.code === '23505') {
+        errorMessage = 'A team with this name already exists';
+      }
+      toast({ title: errorMessage, status: 'error', duration: 3000 });
       return;
     }
 
@@ -123,11 +136,33 @@ export const TeamManagement = () => {
   };
 
   const handleDeleteTeam = async (id: string) => {
+    // First check if team has members
+    const { data: members, error: checkError } = await supabase
+      .from('user_teams')
+      .select('id')
+      .eq('team_id', id);
+
+    if (checkError) {
+      toast({ title: 'Error checking team members', status: 'error', duration: 3000 });
+      return;
+    }
+
+    if (members && members.length > 0) {
+      toast({
+        title: 'Cannot delete team',
+        description: 'Please remove all team members before deleting the team',
+        status: 'error',
+        duration: 3000
+      });
+      return;
+    }
+
     const { error } = await supabase.from('teams').delete().eq('id', id);
     if (error) {
       toast({ title: 'Error deleting team', status: 'error', duration: 3000 });
       return;
     }
+
     toast({ title: 'Team deleted', status: 'success', duration: 3000 });
     fetchTeams();
     if (selectedTeam === id) {
@@ -139,6 +174,43 @@ export const TeamManagement = () => {
     if (!selectedTeam || !selectedUser) {
       toast({ title: 'Please select a team and user', status: 'error', duration: 3000 });
       return;
+    }
+
+    // Check if user is already in the team
+    const { data: existingMember, error: checkError } = await supabase
+      .from('user_teams')
+      .select('id')
+      .eq('team_id', selectedTeam)
+      .eq('user_id', selectedUser)
+      .single();
+
+    if (existingMember) {
+      toast({ 
+        title: 'User is already a member of this team',
+        status: 'error',
+        duration: 3000
+      });
+      return;
+    }
+
+    // If adding as team lead, check if there's already a team lead
+    if (isTeamLead) {
+      const { data: existingLead, error: leadCheckError } = await supabase
+        .from('user_teams')
+        .select('id')
+        .eq('team_id', selectedTeam)
+        .eq('is_team_lead', true)
+        .single();
+
+      if (existingLead) {
+        toast({
+          title: 'Team lead already exists',
+          description: 'Please remove the current team lead before assigning a new one',
+          status: 'error',
+          duration: 3000
+        });
+        return;
+      }
     }
 
     const { error } = await supabase.from('user_teams').insert([{
@@ -154,12 +226,31 @@ export const TeamManagement = () => {
 
     toast({ title: 'Team member added', status: 'success', duration: 3000 });
     fetchTeamMembers(selectedTeam);
+    onTeamMembershipChange?.();
     onClose();
     setSelectedUser('');
     setIsTeamLead(false);
   };
 
   const handleRemoveMember = async (userId: string, teamId: string) => {
+    // Check if this is the last team lead
+    const { data: member, error: checkError } = await supabase
+      .from('user_teams')
+      .select('is_team_lead')
+      .eq('user_id', userId)
+      .eq('team_id', teamId)
+      .single();
+
+    if (member?.is_team_lead) {
+      toast({
+        title: 'Cannot remove team lead',
+        description: 'Please assign a new team lead before removing the current one',
+        status: 'error',
+        duration: 3000
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from('user_teams')
       .delete()
@@ -173,9 +264,30 @@ export const TeamManagement = () => {
 
     toast({ title: 'Team member removed', status: 'success', duration: 3000 });
     fetchTeamMembers(teamId);
+    onTeamMembershipChange?.();
   };
 
   const handleToggleTeamLead = async (userId: string, teamId: string, currentStatus: boolean) => {
+    // If making someone a team lead, check if there's already one
+    if (!currentStatus) {
+      const { data: existingLead, error: leadCheckError } = await supabase
+        .from('user_teams')
+        .select('id')
+        .eq('team_id', teamId)
+        .eq('is_team_lead', true)
+        .single();
+
+      if (existingLead) {
+        toast({
+          title: 'Team lead already exists',
+          description: 'Please remove the current team lead before assigning a new one',
+          status: 'error',
+          duration: 3000
+        });
+        return;
+      }
+    }
+
     const { error } = await supabase
       .from('user_teams')
       .update({ is_team_lead: !currentStatus })
@@ -189,6 +301,7 @@ export const TeamManagement = () => {
 
     toast({ title: 'Team lead status updated', status: 'success', duration: 3000 });
     fetchTeamMembers(teamId);
+    onTeamMembershipChange?.();
   };
 
   return (

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Box,
   Tabs,
@@ -13,6 +13,12 @@ import { TeamManagement } from '../components/admin/TeamManagement';
 import { UserManagement } from '../components/admin/UserManagement';
 
 const AdminPage: React.FC = () => {
+  const userManagementRef = useRef<{ refreshUsers: () => void } | null>(null);
+
+  const handleTeamMembershipChange = () => {
+    userManagementRef.current?.refreshUsers();
+  };
+
   return (
     <Box p={6}>
       <Tabs>
@@ -25,10 +31,10 @@ const AdminPage: React.FC = () => {
 
         <TabPanels>
           <TabPanel>
-            <UserManagement />
+            <UserManagement ref={userManagementRef} />
           </TabPanel>
           <TabPanel>
-            <TeamManagement />
+            <TeamManagement onTeamMembershipChange={handleTeamMembershipChange} />
           </TabPanel>
           <TabPanel>
             <TagManagement />
