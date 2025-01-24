@@ -31,3 +31,12 @@ VALUES
     ('is_billable', 'boolean', 'Whether this ticket is billable to the customer'),
     ('last_activity', 'timestamp', 'Timestamp of the last activity on this ticket'),
     ('blocked_by', 'ticket', 'Reference to a ticket that is blocking this one'); 
+
+-- Insert people records for existing auth.users
+INSERT INTO public.users (id, full_name, role)
+SELECT 
+    id,
+    raw_user_meta_data->>'full_name' as full_name,
+    'customer'::public.user_role as role
+FROM auth.users
+ON CONFLICT (id) DO NOTHING;
