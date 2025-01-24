@@ -27,7 +27,7 @@ CREATE TABLE public.tickets (
     id            uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     title         text NOT NULL,
     description   text,
-    team          uuid NOT NULL DEFAULT get_triage_team_id() REFERENCES public.teams(id),
+    team          uuid NOT NULL DEFAULT get_triage_team_id() REFERENCES public.teams(id) ON DELETE SET DEFAULT,
     creator       uuid NOT NULL DEFAULT auth.uid() REFERENCES public.users(id),
     created_at    timestamp with time zone DEFAULT now(),
     updated_at    timestamp with time zone DEFAULT now()
