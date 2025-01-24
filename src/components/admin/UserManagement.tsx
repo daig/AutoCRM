@@ -1,4 +1,4 @@
-import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Box,
   Text,
@@ -42,7 +42,7 @@ export interface UserManagementRef {
   refreshUsers: () => void;
 }
 
-export const UserManagement = forwardRef<UserManagementRef>((props, ref) => {
+export const UserManagement = forwardRef<UserManagementRef>((_, ref) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
