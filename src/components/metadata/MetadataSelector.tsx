@@ -20,13 +20,7 @@ import {
 } from '@chakra-ui/react';
 import { AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../../config/supabase';
-
-interface MetadataFieldType {
-  id: string;
-  name: string;
-  value_type: string;
-  description: string | null;
-}
+import { MetadataFieldTypeSelector, MetadataFieldType } from './MetadataFieldTypeSelector';
 
 interface ExistingMetadata {
   field_type: {
@@ -126,7 +120,8 @@ export const MetadataSelector = ({ ticketId, existingMetadata, onMetadataAdded }
           metadata.field_value_date = fieldValue;
           break;
         case 'timestamp':
-          metadata.field_value_timestamp = fieldValue;
+          // Convert local datetime-local value to UTC ISO string
+          metadata.field_value_timestamp = new Date(fieldValue).toISOString();
           break;
         case 'user':
           metadata.field_value_user = fieldValue;
@@ -247,6 +242,12 @@ export const MetadataSelector = ({ ticketId, existingMetadata, onMetadataAdded }
 
   const availableFieldTypes = fieldTypes.filter(type => !existingFieldTypeIds.has(type.id));
 
+  const handleFieldTypeSelect = (fieldTypeId: string) => {
+    const type = fieldTypes.find(t => t.id === fieldTypeId);
+    setSelectedFieldType(type || null);
+    setFieldValue(null);
+  };
+
   return (
     <Box display="inline-block">
       <Popover
@@ -267,26 +268,16 @@ export const MetadataSelector = ({ ticketId, existingMetadata, onMetadataAdded }
             onClick={() => setIsOpen(true)}
           />
         </PopoverTrigger>
-        <PopoverContent width="300px" bg={bgColor}>
+        <PopoverContent width="350px" bg={bgColor}>
           <PopoverBody>
             <VStack align="stretch" spacing={4}>
               <FormControl>
                 <FormLabel>Field Type</FormLabel>
-                <Select
-                  placeholder="Select field type"
-                  value={selectedFieldType?.id || ''}
-                  onChange={(e) => {
-                    const type = fieldTypes.find(t => t.id === e.target.value);
-                    setSelectedFieldType(type || null);
-                    setFieldValue(null);
-                  }}
-                >
-                  {availableFieldTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name}
-                    </option>
-                  ))}
-                </Select>
+                <MetadataFieldTypeSelector
+                  fieldTypes={availableFieldTypes}
+                  selectedFieldType={selectedFieldType}
+                  onFieldTypeSelect={handleFieldTypeSelect}
+                />
               </FormControl>
 
               {selectedFieldType && (

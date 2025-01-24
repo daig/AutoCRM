@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
+import { useUser } from '../context/UserContext';
 
 export const CreateTicketPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +24,7 @@ export const CreateTicketPage = () => {
   });
   const toast = useToast();
   const navigate = useNavigate();
+  const { userId } = useUser();
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -38,13 +40,36 @@ export const CreateTicketPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!userId) {
+      toast({
+        title: 'Error',
+        description: 'You must be logged in to create a ticket',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
+      // First get the user's team
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('team_id')
+        .eq('id', userId)
+        .single();
+
+      if (userError) throw userError;
+
       const { data, error } = await supabase
         .from('tickets')
         .insert([
           {
             title: formData.title,
             description: formData.description,
+            creator: userId,
+            team: userData?.team_id || null, // Use the user's team or null if they don't have one
           },
         ])
         .select()

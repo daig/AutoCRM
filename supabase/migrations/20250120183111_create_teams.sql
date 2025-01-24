@@ -4,4 +4,4 @@ CREATE TABLE public.teams (
     description text,
     created_at  timestamp with time zone DEFAULT now(),
     updated_at  timestamp with time zone DEFAULT now()
-);
+); 

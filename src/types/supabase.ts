@@ -7,33 +7,41 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      agent_skills: {
+        Row: {
+          agent: string
+          created_at: string | null
+          proficiency: string
+        }
+        Insert: {
+          agent: string
+          created_at?: string | null
+          proficiency: string
+        }
+        Update: {
+          agent?: string
+          created_at?: string | null
+          proficiency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_skills_agent_fkey"
+            columns: ["agent"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_skills_proficiency_fkey"
+            columns: ["proficiency"]
+            isOneToOne: false
+            referencedRelation: "proficiencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           content: string
@@ -58,6 +66,53 @@ export type Database = {
           tags?: string[] | null
           title?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      proficiencies: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+          skill: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+          skill: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
+          skill?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proficiencies_skill_fkey"
+            columns: ["skill"]
+            isOneToOne: false
+            referencedRelation: "skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      skills: {
+        Row: {
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -305,59 +360,44 @@ export type Database = {
       tickets: {
         Row: {
           created_at: string | null
+          creator: string
           description: string | null
           id: string
+          team: string
           title: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          creator?: string
           description?: string | null
           id?: string
+          team?: string
           title: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          creator?: string
           description?: string | null
           id?: string
+          team?: string
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
-      }
-      user_teams: {
-        Row: {
-          created_at: string | null
-          id: string
-          team_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          team_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          team_id?: string | null
-          user_id?: string | null
-        }
         Relationships: [
           {
-            foreignKeyName: "user_teams_team_id_fkey"
-            columns: ["team_id"]
+            foreignKeyName: "tickets_creator_fkey"
+            columns: ["creator"]
             isOneToOne: false
-            referencedRelation: "teams"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "user_teams_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "tickets_team_fkey"
+            columns: ["team"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]
@@ -367,28 +407,95 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
-          updated_at: string | null
+          is_team_lead: boolean
+          role: "administrator" | "agent" | "customer"
+          team_id: string | null
         }
         Insert: {
           created_at?: string | null
           full_name?: string | null
-          id?: string
-          updated_at?: string | null
+          id: string
+          is_team_lead?: boolean
+          role?: "administrator" | "agent" | "customer"
+          team_id?: string | null
         }
         Update: {
           created_at?: string | null
           full_name?: string | null
           id?: string
-          updated_at?: string | null
+          is_team_lead?: boolean
+          role?: "administrator" | "agent" | "customer"
+          team_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "users_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      gen_namespace_v5: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_triage_team_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      gtrgm_compress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: {
+          "": unknown
+        }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      set_limit: {
+        Args: {
+          "": number
+        }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: {
+          "": string
+        }
+        Returns: string[]
+      }
     }
     Enums: {
       metadata_value_type:
@@ -400,6 +507,7 @@ export type Database = {
         | "timestamp"
         | "user"
         | "ticket"
+      user_role: "administrator" | "agent" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never

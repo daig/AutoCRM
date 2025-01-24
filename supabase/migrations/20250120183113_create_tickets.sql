@@ -1,9 +1,34 @@
 --- TICKETS ---
 
+-- Create a default namespace for v5 UUIDs
+CREATE OR REPLACE FUNCTION gen_namespace_v5()
+RETURNS uuid AS $$
+BEGIN
+    -- Using a fixed string to generate a consistent namespace UUID
+    RETURN uuid_generate_v5(uuid_nil(), 'autocrm.default.namespace');
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Create a function to generate the triage team ID
+CREATE OR REPLACE FUNCTION get_triage_team_id()
+RETURNS uuid AS $$
+BEGIN
+    -- Using the namespace to generate a consistent UUID for the triage team
+    RETURN uuid_generate_v5(gen_namespace_v5(), 'triage.team');
+END;
+$$ LANGUAGE plpgsql IMMUTABLE;
+
+-- Insert the triage team if it doesn't exist
+INSERT INTO public.teams (id, name, description)
+VALUES (get_triage_team_id(), 'Triage', 'Default team for new tickets')
+ON CONFLICT (id) DO NOTHING;
+
 CREATE TABLE public.tickets (
     id            uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     title         text NOT NULL,
     description   text,
+    team          uuid NOT NULL DEFAULT get_triage_team_id() REFERENCES public.teams(id) ON DELETE SET DEFAULT,
+    creator       uuid NOT NULL DEFAULT auth.uid() REFERENCES public.users(id),
     created_at    timestamp with time zone DEFAULT now(),
     updated_at    timestamp with time zone DEFAULT now()
 );
@@ -22,7 +47,7 @@ CREATE TABLE public.tag_types (
 
 CREATE TABLE public.tags (
     id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    type_id     uuid NOT NULL REFERENCES public.tag_types (id),
+    type_id     uuid NOT NULL REFERENCES public.tag_types (id) ON DELETE CASCADE,
     name        text NOT NULL CHECK (length(name) BETWEEN 1 AND 50),
     description text CHECK (length(description) <= 500),
     UNIQUE (type_id, name)
@@ -82,6 +107,9 @@ CREATE TYPE public.metadata_value_type AS ENUM (
     'ticket'
 );
 
+-- Enable pg_trgm extension for trigram search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TABLE public.ticket_metadata_field_types (
     id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     name        text NOT NULL UNIQUE CHECK (length(name) BETWEEN 1 AND 50),
@@ -96,7 +124,7 @@ CREATE INDEX idx_metadata_field_types_value_type ON public.ticket_metadata_field
 CREATE TABLE public.ticket_metadata (
     id              uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     ticket          uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    field_type      uuid NOT NULL REFERENCES public.ticket_metadata_field_types (id),
+    field_type      uuid NOT NULL REFERENCES public.ticket_metadata_field_types (id) ON DELETE CASCADE,
     field_value_text text,
     field_value_int integer CHECK (field_value_int >= 0),
     field_value_float double precision,
@@ -147,6 +175,9 @@ CREATE INDEX idx_ticket_metadata_timestamp ON public.ticket_metadata (field_valu
 CREATE INDEX idx_ticket_metadata_user ON public.ticket_metadata (field_value_user) WHERE field_value_user IS NOT NULL;
 -- For finding tickets with references to other tickets (e.g., "find all blockers of ticket X")
 CREATE INDEX idx_ticket_metadata_ticket_ref ON public.ticket_metadata (field_value_ticket) WHERE field_value_ticket IS NOT NULL;
+
+-- Add GIN index for trigram search on text metadata values
+CREATE INDEX idx_ticket_metadata_text_trigram ON public.ticket_metadata USING GIN (field_value_text gin_trgm_ops) WHERE field_value_text IS NOT NULL;
 
 -- validate field value type matches the field type
 CREATE OR REPLACE FUNCTION validate_metadata_field_value()

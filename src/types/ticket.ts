@@ -4,6 +4,14 @@ export interface TicketData {
   description: string | null;
   created_at: string;
   updated_at: string;
+  creator: {
+    id: string;
+    full_name: string;
+  };
+  team: {
+    id: string;
+    name: string;
+  } | null;
   tags: {
     tag: {
       id: string;
@@ -15,6 +23,7 @@ export interface TicketData {
     }
   }[];
   metadata: {
+    id: string;
     field_type: {
       id: string;
       name: string;

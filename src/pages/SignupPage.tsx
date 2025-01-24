@@ -26,23 +26,29 @@ export const SignupPage = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.rpc('register_user', {
-        full_name: formData.fullName,
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName // This will be available in raw_user_meta_data
+          }
+        }
       });
 
       if (error) throw error;
 
-      toast({
-        title: 'Account created.',
-        description: "You've successfully signed up! Please log in.",
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
+      if (data.user) {
+        toast({
+          title: 'Account created.',
+          description: "You've successfully signed up! Please check your email for verification.",
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
 
-      navigate('/login');
+        navigate('/login');
+      }
     } catch (error) {
       toast({
         title: 'Error',
