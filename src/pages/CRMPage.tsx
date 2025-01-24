@@ -22,7 +22,7 @@ export const CRMPage = () => {
   const [isFilterEnabled, setIsFilterEnabled] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const { userId } = useUser();
+  const { userId, userRole } = useUser();
   const location = useLocation();
   const messageFeedRef = useRef<MessageFeedHandle>(null);
 
@@ -47,15 +47,18 @@ export const CRMPage = () => {
 
   const fetchTickets = useCallback(async (shouldApplyFilters = isFilterEnabled) => {
     try {
-      // First get the user's team
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('team_id')
-        .eq('id', userId)
-        .single();
+      // First get the user's team if they're not a customer
+      let userTeamId = null;
+      if (userRole !== 'customer') {
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('team_id')
+          .eq('id', userId)
+          .single();
 
-      if (userError) throw userError;
-      const userTeamId = userData?.team_id;
+        if (userError) throw userError;
+        userTeamId = userData?.team_id;
+      }
 
       let query = supabase
         .from('tickets')
@@ -82,8 +85,13 @@ export const CRMPage = () => {
           )
         `);
 
-      // Add team and creator filters - show tickets where user is either on the team or is the creator
-      query = query.or(`team.eq.${userTeamId}${userTeamId ? ',' : ''}creator.eq.${userId}`);
+      // For customers, only show tickets they created
+      // For agents and admins, show tickets where they are either on the team or are the creator
+      if (userRole === 'customer') {
+        query = query.eq('creator', userId);
+      } else {
+        query = query.or(`team.eq.${userTeamId}${userTeamId ? ',' : ''}creator.eq.${userId}`);
+      }
 
       if (shouldApplyFilters) {
         // Apply tag filters
@@ -249,7 +257,7 @@ export const CRMPage = () => {
     } catch (error) {
       console.error('Error fetching tickets:', error);
     }
-  }, [selectedTags, metadataFilters, isFilterEnabled, userId]);
+  }, [selectedTags, metadataFilters, isFilterEnabled, userId, userRole]);
 
   const fetchTicketDetails = useCallback(async () => {
     if (!selectedTicketId) {

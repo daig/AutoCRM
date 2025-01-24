@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
-import { VStack, Box, Text, Avatar, Flex, useColorModeValue, SlideFade, Fade } from '@chakra-ui/react';
+import { VStack, Box, Text, Avatar, Flex, useColorModeValue, SlideFade, Fade, Badge } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
 
 export type Message = {
@@ -9,6 +9,7 @@ export type Message = {
   sender: {
     id: string;
     full_name: string | null;
+    role: 'administrator' | 'agent' | 'customer' | null;
   } | null;
 };
 
@@ -24,6 +25,8 @@ export const MessageFeed = forwardRef<MessageFeedHandle, MessageFeedProps>(({ ti
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messageBg = useColorModeValue('gray.50', 'gray.700');
+  const customerBg = useColorModeValue('blue.50', 'blue.900');
+  const agentBg = useColorModeValue('green.50', 'green.900');
 
   const fetchMessages = useCallback(async () => {
     if (!ticketId) {
@@ -41,7 +44,8 @@ export const MessageFeed = forwardRef<MessageFeedHandle, MessageFeedProps>(({ ti
           created_at,
           sender:users (
             id,
-            full_name
+            full_name,
+            role
           )
         `)
         .eq('ticket', ticketId)
@@ -108,33 +112,44 @@ export const MessageFeed = forwardRef<MessageFeedHandle, MessageFeedProps>(({ ti
 
   return (
     <VStack spacing={4} align="stretch">
-      {messages.map((message) => (
-        <SlideFade key={message.id} in={true} offsetY="20px">
-          <Box
-            p={4}
-            bg={messageBg}
-            borderRadius="md"
-          >
-            <Flex gap={3}>
-              <Avatar
-                size="sm"
-                name={message.sender?.full_name || 'Unknown User'}
-              />
-              <Box>
-                <Flex gap={2} align="center" mb={1}>
-                  <Text fontWeight="medium">
-                    {message.sender?.full_name || 'Unknown User'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.500">
-                    {new Date(message.created_at).toLocaleString()}
-                  </Text>
-                </Flex>
-                <Text>{message.content}</Text>
-              </Box>
-            </Flex>
-          </Box>
-        </SlideFade>
-      ))}
+      {messages.map((message) => {
+        const isCustomer = message.sender?.role === 'customer';
+        const bgColor = isCustomer ? customerBg : agentBg;
+        const roleColor = isCustomer ? 'blue' : 'green';
+        const roleText = message.sender?.role === 'administrator' ? 'Admin' : 
+                        message.sender?.role === 'agent' ? 'Agent' : 'Customer';
+
+        return (
+          <SlideFade key={message.id} in={true} offsetY="20px">
+            <Box
+              p={4}
+              bg={bgColor}
+              borderRadius="md"
+            >
+              <Flex gap={3}>
+                <Avatar
+                  size="sm"
+                  name={message.sender?.full_name || 'Unknown User'}
+                />
+                <Box flex="1">
+                  <Flex gap={2} align="center" mb={1} wrap="wrap">
+                    <Text fontWeight="medium">
+                      {message.sender?.full_name || 'Unknown User'}
+                    </Text>
+                    <Badge colorScheme={roleColor} fontSize="xs">
+                      {roleText}
+                    </Badge>
+                    <Text fontSize="sm" color="gray.500">
+                      {new Date(message.created_at).toLocaleString()}
+                    </Text>
+                  </Flex>
+                  <Text>{message.content}</Text>
+                </Box>
+              </Flex>
+            </Box>
+          </SlideFade>
+        );
+      })}
       {messages.length === 0 && (
         <Box p={4}>
           <Text color="gray.500">No messages yet</Text>

@@ -127,6 +127,46 @@ UPDATE public.users
 SET role = 'agent', team_id = 'f6a7b8c9-d0e1-8765-4321-8b9c7d6e5f4a', is_team_lead = true
 WHERE id = 'f2035a53-7b2f-4b6c-89d0-6ed461e9b482';
 
+-- Insert skills
+INSERT INTO public.skills (id, name, description)
+VALUES
+    ('d1e2f3a4-b5c6-4321-8765-1a2b3c4d5e6f', 'Database Management', 'SQL and database optimization skills'),
+    ('e2f3a4b5-c6d7-4321-8765-2b3c4d5e6f7a', 'Customer Service', 'Customer interaction and support skills'),
+    ('f3a4b5c6-d7e8-4321-8765-3c4d5e6f7a8b', 'Cloud Infrastructure', 'AWS and cloud platform expertise'),
+    ('a4b5c6d7-e8f9-4321-8765-4d5e6f7a8b9c', 'Technical Writing', 'Documentation and knowledge base management');
+
+-- Insert proficiencies
+INSERT INTO public.proficiencies (id, skill, name, description)
+VALUES
+    -- Database Management proficiencies
+    ('b5c6d7e8-f9a0-4321-8765-5e6f7a8b9c0d', 'd1e2f3a4-b5c6-4321-8765-1a2b3c4d5e6f', 'SQL Expert', 'Advanced SQL query optimization and database design'),
+    ('c6d7e8f9-a0b1-4321-8765-6f7a8b9c0d1e', 'd1e2f3a4-b5c6-4321-8765-1a2b3c4d5e6f', 'Database Administrator', 'Database maintenance and performance tuning'),
+    
+    -- Customer Service proficiencies
+    ('d7e8f9a0-b1c2-4321-8765-7a8b9c0d1e2f', 'e2f3a4b5-c6d7-4321-8765-2b3c4d5e6f7a', 'Senior Support', 'Advanced customer support and conflict resolution'),
+    ('e8f9a0b1-c2d3-4321-8765-8b9c0d1e2f3a', 'e2f3a4b5-c6d7-4321-8765-2b3c4d5e6f7a', 'Support Lead', 'Team leadership and escalation management'),
+    
+    -- Cloud Infrastructure proficiencies
+    ('f9a0b1c2-d3e4-4321-8765-9c0d1e2f3a4b', 'f3a4b5c6-d7e8-4321-8765-3c4d5e6f7a8b', 'AWS Certified', 'AWS Solutions Architect certification'),
+    ('a0b1c2d3-e4f5-4321-8765-0d1e2f3a4b5c', 'f3a4b5c6-d7e8-4321-8765-3c4d5e6f7a8b', 'Cloud Expert', 'Multi-cloud platform expertise'),
+    
+    -- Technical Writing proficiencies
+    ('b1c2d3e4-f5a6-4321-8765-1e2f3a4b5c6d', 'a4b5c6d7-e8f9-4321-8765-4d5e6f7a8b9c', 'Documentation Specialist', 'Technical documentation and style guide management'),
+    ('c2d3e4f5-a6b7-4321-8765-2f3a4b5c6d7e', 'a4b5c6d7-e8f9-4321-8765-4d5e6f7a8b9c', 'Knowledge Base Manager', 'Knowledge base organization and maintenance');
+
+-- Assign skills to agents
+INSERT INTO public.agent_skills (agent, proficiency)
+VALUES
+    -- Technical Support Team Lead (57f969fc-644d-4b2c-8e64-7ecd84ee4e13)
+    ('57f969fc-644d-4b2c-8e64-7ecd84ee4e13', 'b5c6d7e8-f9a0-4321-8765-5e6f7a8b9c0d'),  -- SQL Expert
+    ('57f969fc-644d-4b2c-8e64-7ecd84ee4e13', 'f9a0b1c2-d3e4-4321-8765-9c0d1e2f3a4b'),  -- AWS Certified
+    ('57f969fc-644d-4b2c-8e64-7ecd84ee4e13', 'e8f9a0b1-c2d3-4321-8765-8b9c0d1e2f3a'),  -- Support Lead
+    
+    -- Customer Success Team Lead (f2035a53-7b2f-4b6c-89d0-6ed461e9b482)
+    ('f2035a53-7b2f-4b6c-89d0-6ed461e9b482', 'd7e8f9a0-b1c2-4321-8765-7a8b9c0d1e2f'),  -- Senior Support
+    ('f2035a53-7b2f-4b6c-89d0-6ed461e9b482', 'b1c2d3e4-f5a6-4321-8765-1e2f3a4b5c6d'),  -- Documentation Specialist
+    ('f2035a53-7b2f-4b6c-89d0-6ed461e9b482', 'e8f9a0b1-c2d3-4321-8765-8b9c0d1e2f3a');  -- Support Lead
+
 -- Add messages to tickets
 INSERT INTO public.ticket_messages (ticket, sender, content)
 VALUES
