@@ -19,6 +19,7 @@ export interface TicketData {
     }
   }[];
   metadata: {
+    id: string;
     field_type: {
       id: string;
       name: string;

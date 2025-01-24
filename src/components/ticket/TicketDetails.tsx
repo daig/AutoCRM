@@ -62,6 +62,7 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [loadingTags, setLoadingTags] = useState<{ [key: string]: boolean }>({});
+  const [loadingMetadata, setLoadingMetadata] = useState<{ [key: string]: boolean }>({});
 
   const handleRemoveTag = async (tagId: string) => {
     try {
@@ -127,6 +128,40 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
         isClosable: true,
       });
       onClose();
+    }
+  };
+
+  const handleRemoveMetadata = async (metadataId: string) => {
+    try {
+      setLoadingMetadata(prev => ({ ...prev, [metadataId]: true }));
+      
+      // Delete the metadata
+      const { error } = await supabase
+        .from('ticket_metadata')
+        .delete()
+        .eq('id', metadataId);
+
+      if (error) throw error;
+
+      // Wait a small delay after the delete before refreshing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Refresh the UI
+      await onRefresh();
+      
+      // Wait a small delay after the refresh
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      setLoadingMetadata(prev => ({ ...prev, [metadataId]: false }));
+    } catch (err) {
+      console.error('Error removing metadata:', err);
+      toast({
+        title: 'Error removing metadata field',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+      setLoadingMetadata(prev => ({ ...prev, [metadataId]: false }));
     }
   };
 
@@ -233,9 +268,9 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
             onMetadataAdded={onRefresh}
           />
         </Flex>
-        <Grid templateColumns="auto 1fr" gap={2} alignItems="center">
+        <Grid templateColumns="auto 1fr auto" gap={2} alignItems="center">
           {ticket.metadata.map((field) => (
-            <React.Fragment key={field.field_type.id}>
+            <React.Fragment key={field.id}>
               <GridItem>
                 <Text fontSize="sm" color="gray.500">
                   {field.field_type.name}:
@@ -253,6 +288,20 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
                     field.field_value_ticket?.title ||
                     'N/A'}
                 </Text>
+              </GridItem>
+              <GridItem>
+                {loadingMetadata[field.id] ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <IconButton
+                    aria-label="Delete metadata"
+                    icon={<DeleteIcon />}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="red"
+                    onClick={() => handleRemoveMetadata(field.id)}
+                  />
+                )}
               </GridItem>
             </React.Fragment>
           ))}

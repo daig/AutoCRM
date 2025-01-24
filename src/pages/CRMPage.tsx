@@ -261,6 +261,7 @@ export const CRMPage = () => {
           )
         ),
         metadata:ticket_metadata!ticket_metadata_ticket_fkey (
+          id,
           field_type:ticket_metadata_field_types (name, value_type),
           field_value_text,
           field_value_int,
