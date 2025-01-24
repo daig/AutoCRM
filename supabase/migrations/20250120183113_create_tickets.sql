@@ -4,6 +4,7 @@ CREATE TABLE public.tickets (
     id            uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     title         text NOT NULL,
     description   text,
+    team          uuid REFERENCES public.teams(id),
     created_at    timestamp with time zone DEFAULT now(),
     updated_at    timestamp with time zone DEFAULT now()
 );
