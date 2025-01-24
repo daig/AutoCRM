@@ -120,7 +120,7 @@ SET role = 'agent', team_id = 'e5f6a7b8-c9d0-8765-4321-9a8b7c6d5e4f', is_team_le
 WHERE id = '57f969fc-644d-4b2c-8e64-7ecd84ee4e13';
 
 UPDATE public.users 
-SET role = 'agent', team_id = 'e5f6a7b8-c9d0-8765-4321-9a8b7c6d5e4f'
+SET role = 'administrator', team_id = 'e5f6a7b8-c9d0-8765-4321-9a8b7c6d5e4f'
 WHERE id = 'd41d3774-844c-451f-9b65-8ffc87205b01';
 
 UPDATE public.users 

@@ -15,8 +15,15 @@ import {
   InputGroup,
   InputLeftElement,
   VStack,
+  Checkbox,
+  Button,
+  HStack,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
 } from '@chakra-ui/react';
-import { SearchIcon } from '@chakra-ui/icons';
+import { SearchIcon, ChevronDownIcon } from '@chakra-ui/icons';
 import { supabase } from '../../config/supabase';
 
 interface Team {
@@ -40,6 +47,7 @@ const TicketList: React.FC<{
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedTickets, setSelectedTickets] = useState<string[]>([]);
   const toast = useToast();
 
   const fetchTeams = async () => {
@@ -165,6 +173,56 @@ const TicketList: React.FC<{
     }
   };
 
+  const handleSelectAll = (isChecked: boolean) => {
+    setSelectedTickets(isChecked ? tickets.map(t => t.id) : []);
+  };
+
+  const handleSelectTicket = (ticketId: string, isChecked: boolean) => {
+    setSelectedTickets(prev =>
+      isChecked
+        ? [...prev, ticketId]
+        : prev.filter(id => id !== ticketId)
+    );
+  };
+
+  const handleBulkTeamAssignment = async (newTeamId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ team: newTeamId })
+        .in('id', selectedTickets);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Teams updated successfully',
+        status: 'success',
+        duration: 2000,
+      });
+
+      setTickets(prev =>
+        prev.map(ticket =>
+          selectedTickets.includes(ticket.id)
+            ? {
+                ...ticket,
+                team: teams.find(t => t.id === newTeamId) || ticket.team,
+              }
+            : ticket
+        )
+      );
+      
+      // Clear selection after successful update
+      setSelectedTickets([]);
+    } catch (error) {
+      console.error('Error updating ticket teams:', error);
+      toast({
+        title: 'Error updating teams',
+        status: 'error',
+        duration: 3000,
+      });
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" height="200px">
@@ -174,38 +232,74 @@ const TicketList: React.FC<{
   }
 
   return (
-    <Table variant="simple">
-      <Thead>
-        <Tr>
-          <Th>Title</Th>
-          <Th>Created By</Th>
-          <Th>Created At</Th>
-          <Th>Team</Th>
-        </Tr>
-      </Thead>
-      <Tbody>
-        {tickets.map((ticket) => (
-          <Tr key={ticket.id}>
-            <Td>{ticket.title}</Td>
-            <Td>{ticket.creator.full_name}</Td>
-            <Td>{new Date(ticket.created_at).toLocaleString()}</Td>
-            <Td>
-              <Select
-                value={ticket.team.id}
-                onChange={(e) => handleTeamChange(ticket.id, e.target.value)}
-                width="200px"
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </Select>
-            </Td>
+    <VStack spacing={4} align="stretch">
+      {selectedTickets.length > 0 && (
+        <HStack spacing={4}>
+          <Text>{selectedTickets.length} tickets selected</Text>
+          <Menu>
+            <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
+              Assign to Team
+            </MenuButton>
+            <MenuList>
+              {teams.map((team) => (
+                <MenuItem
+                  key={team.id}
+                  onClick={() => handleBulkTeamAssignment(team.id)}
+                >
+                  {team.name}
+                </MenuItem>
+              ))}
+            </MenuList>
+          </Menu>
+        </HStack>
+      )}
+      
+      <Table variant="simple">
+        <Thead>
+          <Tr>
+            <Th>
+              <Checkbox
+                isChecked={selectedTickets.length === tickets.length}
+                isIndeterminate={selectedTickets.length > 0 && selectedTickets.length < tickets.length}
+                onChange={(e) => handleSelectAll(e.target.checked)}
+              />
+            </Th>
+            <Th>Title</Th>
+            <Th>Created By</Th>
+            <Th>Created At</Th>
+            <Th>Team</Th>
           </Tr>
-        ))}
-      </Tbody>
-    </Table>
+        </Thead>
+        <Tbody>
+          {tickets.map((ticket) => (
+            <Tr key={ticket.id}>
+              <Td>
+                <Checkbox
+                  isChecked={selectedTickets.includes(ticket.id)}
+                  onChange={(e) => handleSelectTicket(ticket.id, e.target.checked)}
+                />
+              </Td>
+              <Td>{ticket.title}</Td>
+              <Td>{ticket.creator.full_name}</Td>
+              <Td>{new Date(ticket.created_at).toLocaleString()}</Td>
+              <Td>
+                <Select
+                  value={ticket.team.id}
+                  onChange={(e) => handleTeamChange(ticket.id, e.target.value)}
+                  width="200px"
+                >
+                  {teams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </Select>
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+    </VStack>
   );
 };
 
