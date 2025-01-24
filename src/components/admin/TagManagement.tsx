@@ -1,305 +1,257 @@
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
   FormControl,
-  Grid,
-  GridItem,
-  Heading,
+  FormLabel,
   Input,
-  List,
-  ListItem,
-  Text,
   VStack,
-  useToast,
-  IconButton,
   HStack,
+  Text,
+  useToast,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Textarea,
 } from '@chakra-ui/react';
-import { AddIcon, DeleteIcon } from '@chakra-ui/icons';
-import { useState, useEffect } from 'react';
+import { DeleteIcon, AddIcon } from '@chakra-ui/icons';
 import { supabase } from '../../config/supabase';
 
-interface TagType {
-  id: string;
-  name: string;
-}
-
-interface Tag {
-  id: string;
-  name: string;
-  type_id: string;
-}
-
 export const TagManagement = () => {
-  const [tagTypes, setTagTypes] = useState<TagType[]>([]);
-  const [tags, setTags] = useState<Tag[]>([]);
-  const [newTagTypeName, setNewTagTypeName] = useState('');
-  const [newTagName, setNewTagName] = useState('');
-  const [selectedTagType, setSelectedTagType] = useState<TagType | null>(null);
+  const [tagTypes, setTagTypes] = useState<Array<{ id: string; name: string; description: string | null }>>([]);
+  const [tags, setTags] = useState<Array<{ id: string; name: string; type_id: string; description: string | null }>>([]);
+  const [newTagType, setNewTagType] = useState({ name: '', description: '' });
+  const [newTag, setNewTag] = useState({ name: '', description: '', type_id: '' });
   const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
-  // Fetch tag types and their tags
-  const fetchTagData = async () => {
-    try {
-      // Fetch tag types
-      const { data: typeData, error: typeError } = await supabase
-        .from('tag_types')
-        .select('*')
-        .order('name');
-
-      if (typeError) throw typeError;
-      setTagTypes(typeData || []);
-
-      // Fetch tags
-      const { data: tagData, error: tagError } = await supabase
-        .from('tags')
-        .select('*')
-        .order('name');
-
-      if (tagError) throw tagError;
-      setTags(tagData || []);
-    } catch (error) {
-      console.error('Error fetching tag data:', error);
-      toast({
-        title: 'Error fetching tags',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+  const fetchTagTypes = async () => {
+    const { data, error } = await supabase.from('tag_types').select('*');
+    if (error) {
+      toast({ title: 'Error fetching tag types', status: 'error', duration: 3000 });
+      return;
     }
+    setTagTypes(data);
+  };
+
+  const fetchTags = async () => {
+    const { data, error } = await supabase.from('tags').select('*');
+    if (error) {
+      toast({ title: 'Error fetching tags', status: 'error', duration: 3000 });
+      return;
+    }
+    setTags(data);
   };
 
   useEffect(() => {
-    fetchTagData();
+    fetchTagTypes();
+    fetchTags();
   }, []);
 
   const handleCreateTagType = async () => {
-    if (!newTagTypeName.trim()) return;
+    const { error } = await supabase.from('tag_types').insert([{
+      name: newTagType.name,
+      description: newTagType.description || null
+    }]);
 
-    try {
-      const { error } = await supabase
-        .from('tag_types')
-        .insert([{ name: newTagTypeName.trim() }]);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Tag type created',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      setNewTagTypeName('');
-      fetchTagData();
-    } catch (error) {
-      toast({
-        title: 'Error creating tag type',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+    if (error) {
+      toast({ title: 'Error creating tag type', status: 'error', duration: 3000 });
+      return;
     }
-  };
 
-  const handleDeleteTagType = async (typeId: string) => {
-    try {
-      const { error } = await supabase
-        .from('tag_types')
-        .delete()
-        .eq('id', typeId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Tag type deleted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      if (selectedTagType?.id === typeId) {
-        setSelectedTagType(null);
-      }
-      fetchTagData();
-    } catch (error) {
-      toast({
-        title: 'Error deleting tag type',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    }
+    toast({ title: 'Tag type created', status: 'success', duration: 3000 });
+    setNewTagType({ name: '', description: '' });
+    fetchTagTypes();
   };
 
   const handleCreateTag = async () => {
-    if (!newTagName.trim() || !selectedTagType) return;
+    const { error } = await supabase.from('tags').insert([{
+      name: newTag.name,
+      description: newTag.description || null,
+      type_id: newTag.type_id
+    }]);
 
-    try {
-      const { error } = await supabase
-        .from('tags')
-        .insert([{
-          name: newTagName.trim(),
-          type_id: selectedTagType.id
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Tag created',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      setNewTagName('');
-      fetchTagData();
-    } catch (error) {
-      toast({
-        title: 'Error creating tag',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+    if (error) {
+      toast({ title: 'Error creating tag', status: 'error', duration: 3000 });
+      return;
     }
+
+    toast({ title: 'Tag created', status: 'success', duration: 3000 });
+    setNewTag({ name: '', description: '', type_id: '' });
+    fetchTags();
+    onClose();
   };
 
-  const handleDeleteTag = async (tagId: string) => {
-    try {
-      const { error } = await supabase
-        .from('tags')
-        .delete()
-        .eq('id', tagId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Tag deleted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      fetchTagData();
-    } catch (error) {
-      toast({
-        title: 'Error deleting tag',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+  const handleDeleteTagType = async (id: string) => {
+    const { error } = await supabase.from('tag_types').delete().eq('id', id);
+    if (error) {
+      toast({ title: 'Error deleting tag type', status: 'error', duration: 3000 });
+      return;
     }
+    toast({ title: 'Tag type deleted', status: 'success', duration: 3000 });
+    fetchTagTypes();
+    fetchTags(); // Refresh tags as some might have been cascade deleted
+  };
+
+  const handleDeleteTag = async (id: string) => {
+    const { error } = await supabase.from('tags').delete().eq('id', id);
+    if (error) {
+      toast({ title: 'Error deleting tag', status: 'error', duration: 3000 });
+      return;
+    }
+    toast({ title: 'Tag deleted', status: 'success', duration: 3000 });
+    fetchTags();
   };
 
   return (
-    <Grid templateColumns="repeat(2, 1fr)" gap={8}>
-      <GridItem>
-        <VStack align="stretch" spacing={4}>
-          <Heading size="md">Tag Types</Heading>
-          
-          <Box>
-            <HStack>
-              <FormControl>
+    <Box>
+      <VStack spacing={6} align="stretch">
+        {/* Tag Types Section */}
+        <Box>
+          <Text fontSize="xl" fontWeight="bold" mb={4}>Tag Types</Text>
+          <HStack mb={4}>
+            <FormControl>
+              <Input
+                placeholder="Tag Type Name"
+                value={newTagType.name}
+                onChange={(e) => setNewTagType({ ...newTagType, name: e.target.value })}
+              />
+            </FormControl>
+            <FormControl>
+              <Input
+                placeholder="Description (optional)"
+                value={newTagType.description}
+                onChange={(e) => setNewTagType({ ...newTagType, description: e.target.value })}
+              />
+            </FormControl>
+            <Button leftIcon={<AddIcon />} onClick={handleCreateTagType}>
+              Add Type
+            </Button>
+          </HStack>
+
+          <Table variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Name</Th>
+                <Th>Description</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {tagTypes.map((type) => (
+                <Tr key={type.id}>
+                  <Td>{type.name}</Td>
+                  <Td>{type.description}</Td>
+                  <Td>
+                    <IconButton
+                      aria-label="Delete tag type"
+                      icon={<DeleteIcon />}
+                      colorScheme="red"
+                      onClick={() => handleDeleteTagType(type.id)}
+                    />
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+
+        {/* Tags Section */}
+        <Box>
+          <Text fontSize="xl" fontWeight="bold" mb={4}>Tags</Text>
+          <Button leftIcon={<AddIcon />} onClick={onOpen} mb={4}>
+            Create New Tag
+          </Button>
+
+          <Table variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Name</Th>
+                <Th>Type</Th>
+                <Th>Description</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {tags.map((tag) => (
+                <Tr key={tag.id}>
+                  <Td>{tag.name}</Td>
+                  <Td>{tagTypes.find(t => t.id === tag.type_id)?.name}</Td>
+                  <Td>{tag.description}</Td>
+                  <Td>
+                    <IconButton
+                      aria-label="Delete tag"
+                      icon={<DeleteIcon />}
+                      colorScheme="red"
+                      onClick={() => handleDeleteTag(tag.id)}
+                    />
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+      </VStack>
+
+      {/* Create Tag Modal */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Create New Tag</ModalHeader>
+          <ModalBody>
+            <VStack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Tag Name</FormLabel>
                 <Input
-                  placeholder="New tag type name"
-                  value={newTagTypeName}
-                  onChange={(e) => setNewTagTypeName(e.target.value)}
+                  value={newTag.name}
+                  onChange={(e) => setNewTag({ ...newTag, name: e.target.value })}
                 />
               </FormControl>
-              <Button
-                leftIcon={<AddIcon />}
-                colorScheme="blue"
-                onClick={handleCreateTagType}
-              >
-                Add
-              </Button>
-            </HStack>
-          </Box>
-
-          <List spacing={2}>
-            {tagTypes.map((type) => (
-              <ListItem
-                key={type.id}
-                p={2}
-                bg={selectedTagType?.id === type.id ? 'blue.50' : 'transparent'}
-                borderRadius="md"
-                cursor="pointer"
-                onClick={() => setSelectedTagType(type)}
-              >
-                <HStack justify="space-between">
-                  <Text>{type.name}</Text>
-                  <IconButton
-                    aria-label="Delete tag type"
-                    icon={<DeleteIcon />}
-                    size="sm"
-                    colorScheme="red"
-                    variant="ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteTagType(type.id);
-                    }}
-                  />
-                </HStack>
-              </ListItem>
-            ))}
-          </List>
-        </VStack>
-      </GridItem>
-
-      <GridItem>
-        <VStack align="stretch" spacing={4}>
-          <Heading size="md">Tags</Heading>
-          
-          {selectedTagType ? (
-            <>
-              <Box>
-                <HStack>
-                  <FormControl>
-                    <Input
-                      placeholder="New tag name"
-                      value={newTagName}
-                      onChange={(e) => setNewTagName(e.target.value)}
-                    />
-                  </FormControl>
-                  <Button
-                    leftIcon={<AddIcon />}
-                    colorScheme="blue"
-                    onClick={handleCreateTag}
-                  >
-                    Add
-                  </Button>
-                </HStack>
-              </Box>
-
-              <List spacing={2}>
-                {tags
-                  .filter((tag) => tag.type_id === selectedTagType.id)
-                  .map((tag) => (
-                    <ListItem key={tag.id} p={2}>
-                      <HStack justify="space-between">
-                        <Text>{tag.name}</Text>
-                        <IconButton
-                          aria-label="Delete tag"
-                          icon={<DeleteIcon />}
-                          size="sm"
-                          colorScheme="red"
-                          variant="ghost"
-                          onClick={() => handleDeleteTag(tag.id)}
-                        />
-                      </HStack>
-                    </ListItem>
+              <FormControl isRequired>
+                <FormLabel>Tag Type</FormLabel>
+                <select
+                  value={newTag.type_id}
+                  onChange={(e) => setNewTag({ ...newTag, type_id: e.target.value })}
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px' }}
+                >
+                  <option value="">Select a tag type</option>
+                  {tagTypes.map((type) => (
+                    <option key={type.id} value={type.id}>
+                      {type.name}
+                    </option>
                   ))}
-              </List>
-            </>
-          ) : (
-            <Text color="gray.500">Select a tag type to manage its tags</Text>
-          )}
-        </VStack>
-      </GridItem>
-    </Grid>
+                </select>
+              </FormControl>
+              <FormControl>
+                <FormLabel>Description</FormLabel>
+                <Textarea
+                  value={newTag.description}
+                  onChange={(e) => setNewTag({ ...newTag, description: e.target.value })}
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleCreateTag}>
+              Create Tag
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </Box>
   );
 }; 

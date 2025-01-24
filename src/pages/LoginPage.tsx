@@ -13,7 +13,7 @@ export const LoginPage = () => {
   const toast = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUserId, setUserRole } = useUser();
+  const { setUserId } = useUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,30 +28,19 @@ export const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
-      if (authError) throw authError;
+      if (error) throw error;
       
-      if (!authData.user) {
+      if (!data.user) {
         throw new Error('Invalid email or password');
       }
 
       // Store the userId in context
-      setUserId(authData.user.id);
-
-      // Fetch user role
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (userError) throw userError;
-      
-      setUserRole(userData.role);
+      setUserId(data.user.id);
 
       toast({
         title: 'Login successful',
@@ -60,14 +49,9 @@ export const LoginPage = () => {
         isClosable: true,
       });
 
-      // Navigate based on role
-      if (userData.role === 'administrator') {
-        navigate('/admin', { replace: true });
-      } else {
-        // Navigate to the protected route the user tried to visit or default to /crm
-        const from = (location.state as any)?.from?.pathname || '/crm';
-        navigate(from, { replace: true });
-      }
+      // Navigate to the protected route the user tried to visit or default to /crm
+      const from = (location.state as any)?.from?.pathname || '/crm';
+      navigate(from, { replace: true });
     } catch (error) {
       toast({
         title: 'Error',

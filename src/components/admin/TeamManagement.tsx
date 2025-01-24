@@ -1,271 +1,348 @@
+import React, { useEffect, useState } from 'react';
 import {
   Box,
   Button,
   FormControl,
   FormLabel,
-  Heading,
   Input,
-  List,
-  ListItem,
-  Select,
-  Text,
   VStack,
+  Text,
   useToast,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
   IconButton,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useDisclosure,
+  Textarea,
+  Checkbox,
   HStack,
-  Collapse,
 } from '@chakra-ui/react';
-import { AddIcon, DeleteIcon, ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
-import { useState, useEffect } from 'react';
+import { DeleteIcon, AddIcon, EditIcon } from '@chakra-ui/icons';
 import { supabase } from '../../config/supabase';
 
 interface Team {
   id: string;
   name: string;
-  team_lead?: string;
-  team_lead_user?: {
-    id: string;
-    full_name: string;
-  };
+  description: string | null;
 }
 
-interface User {
+interface TeamMember {
   id: string;
-  full_name: string;
-  role: string;
+  user_id: string;
+  team_id: string;
+  is_team_lead: boolean;
+  user: {
+    full_name: string | null;
+  };
 }
 
 export const TeamManagement = () => {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [agents, setAgents] = useState<User[]>([]);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
+  const [availableUsers, setAvailableUsers] = useState<Array<{ id: string; full_name: string | null }>>([]);
+  const [newTeam, setNewTeam] = useState({ name: '', description: '' });
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState('');
+  const [isTeamLead, setIsTeamLead] = useState(false);
   const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const fetchTeams = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('teams')
-        .select(`
-          *,
-          team_lead_user:users!teams_team_lead_fkey (
-            id,
-            full_name
-          )
-        `)
-        .order('name');
-
-      if (error) throw error;
-      setTeams(data || []);
-    } catch (error) {
-      console.error('Error fetching teams:', error);
-      toast({
-        title: 'Error fetching teams',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+    const { data, error } = await supabase.from('teams').select('*');
+    if (error) {
+      toast({ title: 'Error fetching teams', status: 'error', duration: 3000 });
+      return;
     }
+    setTeams(data);
   };
 
-  const fetchAgents = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, role')
-        .eq('role', 'agent')
-        .order('full_name');
+  const fetchTeamMembers = async (teamId: string) => {
+    const { data, error } = await supabase
+      .from('user_teams')
+      .select('*, user:users(full_name)')
+      .eq('team_id', teamId);
 
-      if (error) throw error;
-      setAgents(data || []);
-    } catch (error) {
-      console.error('Error fetching agents:', error);
-      toast({
-        title: 'Error fetching agents',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+    if (error) {
+      toast({ title: 'Error fetching team members', status: 'error', duration: 3000 });
+      return;
     }
+
+    setTeamMembers(prev => ({
+      ...prev,
+      [teamId]: data as TeamMember[],
+    }));
+  };
+
+  const fetchAvailableUsers = async () => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, full_name')
+      .order('full_name');
+
+    if (error) {
+      toast({ title: 'Error fetching users', status: 'error', duration: 3000 });
+      return;
+    }
+    setAvailableUsers(data);
   };
 
   useEffect(() => {
     fetchTeams();
-    fetchAgents();
+    fetchAvailableUsers();
   }, []);
 
+  useEffect(() => {
+    if (selectedTeam) {
+      fetchTeamMembers(selectedTeam);
+    }
+  }, [selectedTeam]);
+
   const handleCreateTeam = async () => {
-    if (!newTeamName.trim()) return;
+    const { error } = await supabase.from('teams').insert([{
+      name: newTeam.name,
+      description: newTeam.description || null,
+    }]);
 
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .insert([{ name: newTeamName.trim() }]);
+    if (error) {
+      toast({ title: 'Error creating team', status: 'error', duration: 3000 });
+      return;
+    }
 
-      if (error) throw error;
+    toast({ title: 'Team created', status: 'success', duration: 3000 });
+    setNewTeam({ name: '', description: '' });
+    fetchTeams();
+  };
 
-      toast({
-        title: 'Team created',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      setNewTeamName('');
-      fetchTeams();
-    } catch (error) {
-      toast({
-        title: 'Error creating team',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+  const handleDeleteTeam = async (id: string) => {
+    const { error } = await supabase.from('teams').delete().eq('id', id);
+    if (error) {
+      toast({ title: 'Error deleting team', status: 'error', duration: 3000 });
+      return;
+    }
+    toast({ title: 'Team deleted', status: 'success', duration: 3000 });
+    fetchTeams();
+    if (selectedTeam === id) {
+      setSelectedTeam(null);
     }
   };
 
-  const handleDeleteTeam = async (teamId: string) => {
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Team deleted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      fetchTeams();
-    } catch (error) {
-      toast({
-        title: 'Error deleting team',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+  const handleAddMember = async () => {
+    if (!selectedTeam || !selectedUser) {
+      toast({ title: 'Please select a team and user', status: 'error', duration: 3000 });
+      return;
     }
+
+    const { error } = await supabase.from('user_teams').insert([{
+      team_id: selectedTeam,
+      user_id: selectedUser,
+      is_team_lead: isTeamLead,
+    }]);
+
+    if (error) {
+      toast({ title: 'Error adding team member', status: 'error', duration: 3000 });
+      return;
+    }
+
+    toast({ title: 'Team member added', status: 'success', duration: 3000 });
+    fetchTeamMembers(selectedTeam);
+    onClose();
+    setSelectedUser('');
+    setIsTeamLead(false);
   };
 
-  const handleAssignTeamLead = async (teamId: string, userId: string) => {
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .update({ team_lead: userId })
-        .eq('id', teamId);
+  const handleRemoveMember = async (userId: string, teamId: string) => {
+    const { error } = await supabase
+      .from('user_teams')
+      .delete()
+      .eq('user_id', userId)
+      .eq('team_id', teamId);
 
-      if (error) throw error;
-
-      toast({
-        title: 'Team lead assigned',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
-
-      fetchTeams();
-    } catch (error) {
-      toast({
-        title: 'Error assigning team lead',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
+    if (error) {
+      toast({ title: 'Error removing team member', status: 'error', duration: 3000 });
+      return;
     }
+
+    toast({ title: 'Team member removed', status: 'success', duration: 3000 });
+    fetchTeamMembers(teamId);
+  };
+
+  const handleToggleTeamLead = async (userId: string, teamId: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('user_teams')
+      .update({ is_team_lead: !currentStatus })
+      .eq('user_id', userId)
+      .eq('team_id', teamId);
+
+    if (error) {
+      toast({ title: 'Error updating team lead status', status: 'error', duration: 3000 });
+      return;
+    }
+
+    toast({ title: 'Team lead status updated', status: 'success', duration: 3000 });
+    fetchTeamMembers(teamId);
   };
 
   return (
     <Box>
-      <VStack align="stretch" spacing={6}>
+      <Text fontSize="xl" fontWeight="bold" mb={4}>Team Management</Text>
+      
+      {/* Create Team Section */}
+      <VStack spacing={4} align="stretch" mb={6}>
+        <FormControl isRequired>
+          <FormLabel>Team Name</FormLabel>
+          <Input
+            value={newTeam.name}
+            onChange={(e) => setNewTeam({ ...newTeam, name: e.target.value })}
+            placeholder="Enter team name"
+          />
+        </FormControl>
+
+        <FormControl>
+          <FormLabel>Description</FormLabel>
+          <Textarea
+            value={newTeam.description}
+            onChange={(e) => setNewTeam({ ...newTeam, description: e.target.value })}
+            placeholder="Enter team description"
+          />
+        </FormControl>
+
+        <Button leftIcon={<AddIcon />} onClick={handleCreateTeam} alignSelf="flex-start">
+          Create Team
+        </Button>
+      </VStack>
+
+      {/* Teams List */}
+      <Box mb={6}>
+        <Text fontSize="lg" fontWeight="semibold" mb={2}>Teams</Text>
+        <Table variant="simple">
+          <Thead>
+            <Tr>
+              <Th>Name</Th>
+              <Th>Description</Th>
+              <Th>Actions</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {teams.map((team) => (
+              <Tr key={team.id}>
+                <Td>
+                  <Button variant="link" onClick={() => setSelectedTeam(team.id)}>
+                    {team.name}
+                  </Button>
+                </Td>
+                <Td>{team.description}</Td>
+                <Td>
+                  <IconButton
+                    aria-label="Delete team"
+                    icon={<DeleteIcon />}
+                    colorScheme="red"
+                    onClick={() => handleDeleteTeam(team.id)}
+                  />
+                </Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </Box>
+
+      {/* Team Members Section */}
+      {selectedTeam && (
         <Box>
-          <Heading size="md" mb={4}>Create New Team</Heading>
-          <HStack>
-            <FormControl>
-              <Input
-                placeholder="Enter team name"
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
-              />
-            </FormControl>
-            <Button
-              leftIcon={<AddIcon />}
-              colorScheme="blue"
-              onClick={handleCreateTeam}
-            >
-              Create
+          <HStack justify="space-between" mb={4}>
+            <Text fontSize="lg" fontWeight="semibold">
+              Team Members - {teams.find(t => t.id === selectedTeam)?.name}
+            </Text>
+            <Button leftIcon={<AddIcon />} onClick={onOpen}>
+              Add Member
             </Button>
           </HStack>
-        </Box>
 
-        <Box>
-          <Heading size="md" mb={4}>Teams</Heading>
-          <List spacing={2}>
-            {teams.map((team) => (
-              <ListItem
-                key={team.id}
-                p={3}
-                borderWidth={1}
-                borderRadius="md"
-              >
-                <VStack align="stretch" spacing={2}>
-                  <HStack justify="space-between">
-                    <Box>
-                      <Text fontWeight="bold">{team.name}</Text>
-                      {team.team_lead_user && (
-                        <Text fontSize="sm" color="gray.600">
-                          Lead: {team.team_lead_user.full_name}
-                        </Text>
-                      )}
-                    </Box>
-                    <HStack>
-                      <IconButton
-                        aria-label={expandedTeam === team.id ? "Collapse" : "Expand"}
-                        icon={expandedTeam === team.id ? <ChevronUpIcon /> : <ChevronDownIcon />}
-                        variant="ghost"
-                        onClick={() => setExpandedTeam(expandedTeam === team.id ? null : team.id)}
-                      />
-                      <IconButton
-                        aria-label="Delete team"
-                        icon={<DeleteIcon />}
-                        colorScheme="red"
-                        variant="ghost"
-                        onClick={() => handleDeleteTeam(team.id)}
-                      />
-                    </HStack>
-                  </HStack>
-
-                  <Collapse in={expandedTeam === team.id}>
-                    <Box pt={2}>
-                      <FormControl>
-                        <FormLabel>Team Lead</FormLabel>
-                        <Select
-                          value={team.team_lead || ''}
-                          onChange={(e) => handleAssignTeamLead(team.id, e.target.value)}
-                        >
-                          <option value="">Select a team lead</option>
-                          {agents.map((agent) => (
-                            <option key={agent.id} value={agent.id}>
-                              {agent.full_name}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Box>
-                  </Collapse>
-                </VStack>
-              </ListItem>
-            ))}
-          </List>
+          <Table variant="simple">
+            <Thead>
+              <Tr>
+                <Th>Name</Th>
+                <Th>Role</Th>
+                <Th>Actions</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {teamMembers[selectedTeam]?.map((member) => (
+                <Tr key={member.id}>
+                  <Td>{member.user.full_name}</Td>
+                  <Td>
+                    <Checkbox
+                      isChecked={member.is_team_lead}
+                      onChange={() => handleToggleTeamLead(member.user_id, selectedTeam, member.is_team_lead)}
+                    >
+                      Team Lead
+                    </Checkbox>
+                  </Td>
+                  <Td>
+                    <IconButton
+                      aria-label="Remove member"
+                      icon={<DeleteIcon />}
+                      colorScheme="red"
+                      onClick={() => handleRemoveMember(member.user_id, selectedTeam)}
+                    />
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
         </Box>
-      </VStack>
+      )}
+
+      {/* Add Member Modal */}
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Add Team Member</ModalHeader>
+          <ModalBody>
+            <VStack spacing={4}>
+              <FormControl isRequired>
+                <FormLabel>Select User</FormLabel>
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  style={{ width: '100%', padding: '8px', borderRadius: '6px' }}
+                >
+                  <option value="">Select a user</option>
+                  {availableUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.full_name}
+                    </option>
+                  ))}
+                </select>
+              </FormControl>
+              <FormControl>
+                <Checkbox
+                  isChecked={isTeamLead}
+                  onChange={(e) => setIsTeamLead(e.target.checked)}
+                >
+                  Assign as Team Lead
+                </Checkbox>
+              </FormControl>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleAddMember}>
+              Add Member
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }; 

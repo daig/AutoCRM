@@ -1,47 +1,45 @@
+import React from 'react';
 import {
   Box,
-  Container,
-  Heading,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
   Tabs,
+  TabList,
+  TabPanels,
+  Tab,
+  TabPanel,
 } from '@chakra-ui/react';
 import { TagManagement } from '../components/admin/TagManagement';
-import { MetadataManagement } from '../components/admin/MetadataManagement';
+import { MetadataFieldManagement } from '../components/admin/MetadataFieldManagement';
 import { TeamManagement } from '../components/admin/TeamManagement';
 import { UserManagement } from '../components/admin/UserManagement';
 
-export const AdminPage = () => {
+const AdminPage: React.FC = () => {
   return (
-    <Box>
-      <Container maxW="container.xl">
-        <Heading mb={6}>Administration</Heading>
-        <Tabs>
-          <TabList>
-            <Tab>Tags</Tab>
-            <Tab>Metadata Fields</Tab>
-            <Tab>Teams</Tab>
-            <Tab>Users</Tab>
-          </TabList>
+    <Box p={6}>
+      <Tabs>
+        <TabList>
+          <Tab>Users</Tab>
+          <Tab>Teams</Tab>
+          <Tab>Tags</Tab>
+          <Tab>Metadata Fields</Tab>
+        </TabList>
 
-          <TabPanels>
-            <TabPanel>
-              <TagManagement />
-            </TabPanel>
-            <TabPanel>
-              <MetadataManagement />
-            </TabPanel>
-            <TabPanel>
-              <TeamManagement />
-            </TabPanel>
-            <TabPanel>
-              <UserManagement />
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
-      </Container>
+        <TabPanels>
+          <TabPanel>
+            <UserManagement />
+          </TabPanel>
+          <TabPanel>
+            <TeamManagement />
+          </TabPanel>
+          <TabPanel>
+            <TagManagement />
+          </TabPanel>
+          <TabPanel>
+            <MetadataFieldManagement />
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </Box>
   );
-}; 
+};
+
+export default AdminPage; 

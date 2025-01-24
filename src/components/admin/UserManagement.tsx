@@ -1,45 +1,51 @@
+import React, { useEffect, useState } from 'react';
 import {
   Box,
+  Text,
   Table,
   Thead,
   Tbody,
   Tr,
   Th,
   Td,
-  Text,
   Badge,
   useToast,
+  Spinner,
   Select,
-  Heading,
-  VStack,
-  HStack,
-  Input,
-  IconButton,
+  Button,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
 } from '@chakra-ui/react';
-import { SearchIcon } from '@chakra-ui/icons';
-import { useState, useEffect } from 'react';
 import { supabase } from '../../config/supabase';
 
 interface User {
   id: string;
-  full_name: string;
+  full_name: string | null;
   role: 'administrator' | 'agent' | 'customer';
-  created_at: string;
-  assigned_tickets: {
-    id: string;
-    title: string;
-  }[];
   created_tickets: {
     id: string;
     title: string;
+  }[];
+  assigned_teams: {
+    team: {
+      id: string;
+      name: string;
+    };
+    is_team_lead: boolean;
   }[];
 }
 
 export const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure();
 
   const fetchUsers = async () => {
     try {
@@ -47,28 +53,24 @@ export const UserManagement = () => {
         .from('users')
         .select(`
           *,
-          assigned_tickets:tickets!tickets_assignee_fkey (
-            id,
-            title
-          ),
-          created_tickets:tickets!tickets_creator_fkey (
-            id,
-            title
+          created_tickets:tickets(id, title),
+          assigned_teams:user_teams(
+            is_team_lead,
+            team:teams(id, name)
           )
-        `)
-        .order('full_name');
+        `);
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers(data as User[]);
     } catch (error) {
-      console.error('Error fetching users:', error);
       toast({
         title: 'Error fetching users',
         description: error instanceof Error ? error.message : 'An error occurred',
         status: 'error',
-        duration: 5000,
-        isClosable: true,
+        duration: 3000,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -76,7 +78,7 @@ export const UserManagement = () => {
     fetchUsers();
   }, []);
 
-  const handleUpdateRole = async (userId: string, newRole: string) => {
+  const handleRoleChange = async (userId: string, newRole: 'administrator' | 'agent' | 'customer') => {
     try {
       const { error } = await supabase
         .from('users')
@@ -86,10 +88,9 @@ export const UserManagement = () => {
       if (error) throw error;
 
       toast({
-        title: 'Role updated',
+        title: 'Role updated successfully',
         status: 'success',
-        duration: 3000,
-        isClosable: true,
+        duration: 2000,
       });
 
       fetchUsers();
@@ -98,103 +99,134 @@ export const UserManagement = () => {
         title: 'Error updating role',
         description: error instanceof Error ? error.message : 'An error occurred',
         status: 'error',
-        duration: 5000,
-        isClosable: true,
+        duration: 3000,
       });
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  const showUserDetails = (user: User) => {
+    setSelectedUser(user);
+    onOpen();
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="200px">
+        <Spinner size="xl" />
+      </Box>
+    );
+  }
 
   return (
     <Box>
-      <VStack align="stretch" spacing={6}>
-        <Box>
-          <Heading size="md" mb={4}>Users</Heading>
-          
-          <HStack mb={4} spacing={4}>
-            <Box flex={1}>
-              <HStack>
-                <Input
-                  placeholder="Search users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <IconButton
-                  aria-label="Search"
-                  icon={<SearchIcon />}
-                  variant="ghost"
-                />
-              </HStack>
-            </Box>
-            <Box>
-              <Select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-              >
-                <option value="all">All Roles</option>
-                <option value="administrator">Administrators</option>
-                <option value="agent">Agents</option>
-                <option value="customer">Customers</option>
-              </Select>
-            </Box>
-          </HStack>
-        </Box>
+      <Text fontSize="xl" fontWeight="bold" mb={4}>User Management</Text>
 
-        <Box overflowX="auto">
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Name</Th>
-                <Th>Role</Th>
-                <Th>Created At</Th>
-                <Th>Assigned Tickets</Th>
-                <Th>Created Tickets</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {filteredUsers.map((user) => (
-                <Tr key={user.id}>
-                  <Td>
-                    <Text fontWeight="medium">{user.full_name}</Text>
-                  </Td>
-                  <Td>
-                    <Select
-                      size="sm"
-                      value={user.role}
-                      onChange={(e) => handleUpdateRole(user.id, e.target.value)}
-                      width="150px"
-                    >
-                      <option value="administrator">Administrator</option>
-                      <option value="agent">Agent</option>
-                      <option value="customer">Customer</option>
-                    </Select>
-                  </Td>
-                  <Td>
-                    <Text fontSize="sm">
-                      {new Date(user.created_at).toLocaleDateString()}
-                    </Text>
-                  </Td>
-                  <Td>
-                    <Badge colorScheme="blue">
-                      {user.assigned_tickets?.length || 0}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <Badge colorScheme="purple">
-                      {user.created_tickets?.length || 0}
-                    </Badge>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      </VStack>
+      <Table variant="simple">
+        <Thead>
+          <Tr>
+            <Th>Name</Th>
+            <Th>Role</Th>
+            <Th>Teams</Th>
+            <Th>Created Tickets</Th>
+            <Th>Actions</Th>
+          </Tr>
+        </Thead>
+        <Tbody>
+          {users.map((user) => (
+            <Tr key={user.id}>
+              <Td>{user.full_name}</Td>
+              <Td>
+                <Select
+                  value={user.role}
+                  onChange={(e) => handleRoleChange(user.id, e.target.value as 'administrator' | 'agent' | 'customer')}
+                  size="sm"
+                  width="150px"
+                >
+                  <option value="administrator">Administrator</option>
+                  <option value="agent">Agent</option>
+                  <option value="customer">Customer</option>
+                </Select>
+              </Td>
+              <Td>
+                {user.assigned_teams.map((team) => (
+                  <Badge
+                    key={team.team.id}
+                    colorScheme={team.is_team_lead ? 'green' : 'blue'}
+                    mr={2}
+                    mb={1}
+                  >
+                    {team.team.name} {team.is_team_lead && '(Lead)'}
+                  </Badge>
+                ))}
+              </Td>
+              <Td>{user.created_tickets.length}</Td>
+              <Td>
+                <Button size="sm" onClick={() => showUserDetails(user)}>
+                  View Details
+                </Button>
+              </Td>
+            </Tr>
+          ))}
+        </Tbody>
+      </Table>
+
+      {/* User Details Modal */}
+      <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>User Details - {selectedUser?.full_name}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {selectedUser && (
+              <Box>
+                <Text fontWeight="bold" mb={2}>Created Tickets:</Text>
+                {selectedUser.created_tickets.length > 0 ? (
+                  <Table variant="simple" size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th>ID</Th>
+                        <Th>Title</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {selectedUser.created_tickets.map((ticket) => (
+                        <Tr key={ticket.id}>
+                          <Td>{ticket.id}</Td>
+                          <Td>{ticket.title}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                ) : (
+                  <Text color="gray.500">No tickets created</Text>
+                )}
+
+                <Text fontWeight="bold" mt={4} mb={2}>Team Memberships:</Text>
+                {selectedUser.assigned_teams.length > 0 ? (
+                  <Table variant="simple" size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th>Team</Th>
+                        <Th>Role</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {selectedUser.assigned_teams.map((team) => (
+                        <Tr key={team.team.id}>
+                          <Td>{team.team.name}</Td>
+                          <Td>{team.is_team_lead ? 'Team Lead' : 'Member'}</Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                ) : (
+                  <Text color="gray.500">No team memberships</Text>
+                )}
+              </Box>
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 }; 

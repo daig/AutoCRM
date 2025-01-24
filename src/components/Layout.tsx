@@ -9,7 +9,7 @@ import {
   useColorModeValue,
   useToast,
 } from '@chakra-ui/react';
-import { AddIcon } from '@chakra-ui/icons';
+import { AddIcon, SettingsIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import { useUser } from '../context/UserContext';
@@ -23,7 +23,7 @@ export const Layout = ({ children }: LayoutProps) => {
   const headerBg = useColorModeValue('brand.500', 'brand.400');
   const navigate = useNavigate();
   const toast = useToast();
-  const { setUserId, setUserRole, userRole } = useUser();
+  const { setUserId, userRole } = useUser();
 
   const handleLogout = async () => {
     try {
@@ -31,7 +31,6 @@ export const Layout = ({ children }: LayoutProps) => {
       if (error) throw error;
       
       setUserId(null);
-      setUserRole(null);
       navigate('/login');
       
       toast({
@@ -56,29 +55,22 @@ export const Layout = ({ children }: LayoutProps) => {
       <Box as="header" bg={headerBg} color="white" py={4}>
         <Container maxW="container.xl">
           <Flex justify="space-between" align="center">
-            <Heading 
-              size="lg" 
-              cursor="pointer"
-              onClick={() => navigate(userRole === 'administrator' ? '/admin' : '/crm')}
-            >
-              AutoCRM
-            </Heading>
+            <Heading size="lg" cursor="pointer" onClick={() => navigate('/crm')}>AutoCRM</Heading>
             <Flex gap={4}>
-              {userRole !== 'administrator' && (
-                <Button
-                  leftIcon={<AddIcon />}
-                  colorScheme="whiteAlpha"
-                  onClick={() => navigate('/crm/create-ticket')}
-                >
-                  Create Ticket
-                </Button>
-              )}
+              <Button
+                leftIcon={<AddIcon />}
+                colorScheme="whiteAlpha"
+                onClick={() => navigate('/crm/create-ticket')}
+              >
+                Create Ticket
+              </Button>
               {userRole === 'administrator' && (
                 <Button
+                  leftIcon={<SettingsIcon />}
                   colorScheme="whiteAlpha"
-                  onClick={() => navigate('/crm')}
+                  onClick={() => navigate('/admin')}
                 >
-                  View CRM
+                  Admin
                 </Button>
               )}
               <Button
