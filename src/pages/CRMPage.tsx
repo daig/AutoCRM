@@ -248,6 +248,10 @@ export const CRMPage = () => {
       .from('tickets')
       .select(`
         *,
+        creator:users!tickets_creator_fkey (
+          id,
+          full_name
+        ),
         tags:ticket_tags (
           tag (
             id,

@@ -5,6 +5,7 @@ CREATE TABLE public.tickets (
     title         text NOT NULL,
     description   text,
     team          uuid REFERENCES public.teams(id),
+    creator       uuid NOT NULL DEFAULT auth.uid() REFERENCES public.users(id),
     created_at    timestamp with time zone DEFAULT now(),
     updated_at    timestamp with time zone DEFAULT now()
 );

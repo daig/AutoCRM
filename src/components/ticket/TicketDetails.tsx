@@ -146,6 +146,9 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
           <Text color="gray.500" fontSize="sm" mt={1}>
             Created: {new Date(ticket.created_at).toLocaleDateString()}
           </Text>
+          <Text color="gray.500" fontSize="sm">
+            Created by: {ticket.creator.full_name}
+          </Text>
         </Box>
         <IconButton
           aria-label="Delete ticket"
