@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       knowledge_base: {
@@ -305,43 +280,67 @@ export type Database = {
       tickets: {
         Row: {
           created_at: string | null
+          creator: string
           description: string | null
           id: string
+          team: string | null
           title: string
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
+          creator?: string
           description?: string | null
           id?: string
+          team?: string | null
           title: string
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
+          creator?: string
           description?: string | null
           id?: string
+          team?: string | null
           title?: string
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tickets_creator_fkey"
+            columns: ["creator"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_team_fkey"
+            columns: ["team"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_teams: {
         Row: {
           created_at: string | null
           id: string
+          is_team_lead: boolean
           team_id: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          is_team_lead?: boolean
           team_id?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          is_team_lead?: boolean
           team_id?: string | null
           user_id?: string | null
         }
@@ -367,19 +366,19 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
-          updated_at: string | null
+          role: "administrator" | "agent" | "customer"
         }
         Insert: {
           created_at?: string | null
           full_name?: string | null
-          id?: string
-          updated_at?: string | null
+          id: string
+          role?: "administrator" | "agent" | "customer"
         }
         Update: {
           created_at?: string | null
           full_name?: string | null
           id?: string
-          updated_at?: string | null
+          role?: "administrator" | "agent" | "customer"
         }
         Relationships: []
       }
@@ -388,7 +387,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      gtrgm_compress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      gtrgm_decompress: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      gtrgm_in: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      gtrgm_options: {
+        Args: {
+          "": unknown
+        }
+        Returns: undefined
+      }
+      gtrgm_out: {
+        Args: {
+          "": unknown
+        }
+        Returns: unknown
+      }
+      set_limit: {
+        Args: {
+          "": number
+        }
+        Returns: number
+      }
+      show_limit: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      show_trgm: {
+        Args: {
+          "": string
+        }
+        Returns: string[]
+      }
     }
     Enums: {
       metadata_value_type:
@@ -400,6 +444,7 @@ export type Database = {
         | "timestamp"
         | "user"
         | "ticket"
+      user_role: "administrator" | "agent" | "customer"
     }
     CompositeTypes: {
       [_ in never]: never
