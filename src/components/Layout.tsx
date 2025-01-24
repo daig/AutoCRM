@@ -1,3 +1,4 @@
+import React from 'react';
 import { ReactNode } from 'react';
 import {
   Box,
@@ -23,7 +24,30 @@ export const Layout = ({ children }: LayoutProps) => {
   const headerBg = useColorModeValue('brand.500', 'brand.400');
   const navigate = useNavigate();
   const toast = useToast();
-  const { setUserId, userRole } = useUser();
+  const { setUserId, userRole, userId } = useUser();
+  const [isTeamLead, setIsTeamLead] = React.useState(false);
+
+  React.useEffect(() => {
+    const checkTeamLeadStatus = async () => {
+      if (!userId) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('is_team_lead')
+          .eq('id', userId)
+          .single();
+
+        if (error) throw error;
+        setIsTeamLead(data.is_team_lead);
+      } catch (error) {
+        console.error('Error checking team lead status:', error);
+        setIsTeamLead(false);
+      }
+    };
+
+    checkTeamLeadStatus();
+  }, [userId]);
 
   const handleLogout = async () => {
     try {
@@ -77,6 +101,15 @@ export const Layout = ({ children }: LayoutProps) => {
                   onClick={() => navigate('/admin')}
                 >
                   Admin
+                </Button>
+              )}
+              {isTeamLead && (
+                <Button
+                  leftIcon={<SettingsIcon />}
+                  colorScheme="whiteAlpha"
+                  onClick={() => navigate('/manager')}
+                >
+                  Team
                 </Button>
               )}
               <Button

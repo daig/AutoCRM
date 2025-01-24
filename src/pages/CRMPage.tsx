@@ -1,4 +1,4 @@
-import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue } from '@chakra-ui/react';
+import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue, HStack, Button } from '@chakra-ui/react';
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
 import { MessageFeed, MessageFeedHandle, Message } from '../components/ticket/MessageFeed';
@@ -10,6 +10,7 @@ import type { TicketData } from '../types/ticket';
 import type { Database } from '../types/supabase';
 import type { MetadataFilter } from '../components/ticket/TicketMetadataFilter';
 import { useLocation } from 'react-router-dom';
+import { FiUser } from 'react-icons/fi';
 
 type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
 
@@ -25,6 +26,9 @@ export const CRMPage = () => {
   const { userId, userRole } = useUser();
   const location = useLocation();
   const messageFeedRef = useRef<MessageFeedHandle>(null);
+
+  // Add state for assignee filter
+  const [isAssigneeFilterActive, setIsAssigneeFilterActive] = useState(false);
 
   // Clear selection if navigating from a delete action
   useEffect(() => {
@@ -332,7 +336,8 @@ export const CRMPage = () => {
         created_at: string;
         sender: {
           id: string;
-          full_name: string;
+          full_name: string | null;
+          role: 'administrator' | 'agent' | 'customer' | null;
         };
       };
 
@@ -351,7 +356,8 @@ export const CRMPage = () => {
           created_at,
           sender:users!inner (
             id,
-            full_name
+            full_name,
+            role
           )
         `)
         .single();
@@ -366,7 +372,8 @@ export const CRMPage = () => {
           created_at: data.created_at,
           sender: {
             id: data.sender.id,
-            full_name: data.sender.full_name
+            full_name: data.sender.full_name,
+            role: data.sender.role
           }
         };
         messageFeedRef.current?.addMessage(message);
@@ -382,6 +389,51 @@ export const CRMPage = () => {
   const handleFilterEnabledChange = (enabled: boolean) => {
     setIsFilterEnabled(enabled);
     fetchTickets(enabled);
+  };
+
+  // Function to toggle assignee filter
+  const handleAssigneeFilterToggle = async () => {
+    try {
+      // First, check if there's an existing assignee metadata field type
+      const { data: fieldTypeData, error: fieldTypeError } = await supabase
+        .from('ticket_metadata_field_types')
+        .select('id')
+        .eq('name', 'assigned')
+        .single();
+
+      if (fieldTypeError) {
+        console.error('Error fetching assignee field type:', fieldTypeError);
+        return;
+      }
+
+      const assigneeFieldType = {
+        id: fieldTypeData.id,
+        name: 'assigned',
+        value_type: 'user' as const,
+        description: 'The agent assigned to handle this ticket'
+      };
+
+      // Create the assignee filter with just the user ID
+      const assigneeFilter: MetadataFilter = {
+        fieldType: assigneeFieldType,
+        value: userId,
+        columnName: 'field_value_user',
+      };
+
+      // Toggle the filter
+      if (isAssigneeFilterActive) {
+        setMetadataFilters(prev => prev.filter(f => f.fieldType.id !== assigneeFieldType.id));
+        setIsAssigneeFilterActive(false);
+      } else {
+        setMetadataFilters(prev => [...prev.filter(f => f.fieldType.id !== assigneeFieldType.id), assigneeFilter]);
+        setIsAssigneeFilterActive(true);
+        if (!isFilterEnabled) {
+          setIsFilterEnabled(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling assignee filter:', error);
+    }
   };
 
   return (
@@ -450,6 +502,21 @@ export const CRMPage = () => {
 
       {/* Right Sidebar - Ticket List */}
       <GridItem borderLeft="1px" borderColor={borderColor} overflowY="auto">
+        <Box p={4} borderBottom="1px" borderColor={borderColor}>
+          <HStack spacing={4} mb={4}>
+            {userRole === 'agent' && (
+              <Button
+                size="sm"
+                colorScheme={isAssigneeFilterActive ? "blue" : "gray"}
+                variant={isAssigneeFilterActive ? "solid" : "outline"}
+                onClick={handleAssigneeFilterToggle}
+                leftIcon={<FiUser />}
+              >
+                My Tickets
+              </Button>
+            )}
+          </HStack>
+        </Box>
         <TicketList
           tickets={tickets}
           onSelectTicket={setSelectedTicketId}
