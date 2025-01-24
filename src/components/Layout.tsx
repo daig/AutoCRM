@@ -58,6 +58,12 @@ export const Layout = ({ children }: LayoutProps) => {
             <Heading size="lg" cursor="pointer" onClick={() => navigate('/crm')}>AutoCRM</Heading>
             <Flex gap={4}>
               <Button
+                colorScheme="whiteAlpha"
+                onClick={() => navigate('/crm')}
+              >
+                CRM
+              </Button>
+              <Button
                 leftIcon={<AddIcon />}
                 colorScheme="whiteAlpha"
                 onClick={() => navigate('/crm/create-ticket')}

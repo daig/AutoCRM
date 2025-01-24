@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   VStack, 
   Box, 
@@ -27,8 +27,10 @@ import { DeleteIcon } from '@chakra-ui/icons';
 import type { TicketData } from '../../types/ticket';
 import { TagSelector } from '../tag/TagSelector';
 import { MetadataSelector } from '../metadata/MetadataSelector';
+import { TeamSelector } from '../team/TeamSelector';
 import { supabase } from '../../config/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext';
 
 interface TicketDetailsProps {
   ticket: TicketData | null;
@@ -63,6 +65,59 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const [loadingTags, setLoadingTags] = useState<{ [key: string]: boolean }>({});
   const [loadingMetadata, setLoadingMetadata] = useState<{ [key: string]: boolean }>({});
+  const [isTeamLeader, setIsTeamLeader] = useState(false);
+  const { userId } = useUser();
+
+  useEffect(() => {
+    const checkTeamLeaderStatus = async () => {
+      if (!userId || !ticket?.team?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_teams')
+          .select('is_team_lead')
+          .eq('team_id', ticket.team.id)
+          .eq('user_id', userId)
+          .single();
+
+        if (error) throw error;
+        setIsTeamLeader(data?.is_team_lead || false);
+      } catch (err) {
+        console.error('Error checking team leader status:', err);
+        setIsTeamLeader(false);
+      }
+    };
+
+    checkTeamLeaderStatus();
+  }, [userId, ticket?.team?.id]);
+
+  const handleTeamChange = async (newTeamId: string) => {
+    try {
+      const { error } = await supabase
+        .from('tickets')
+        .update({ team: newTeamId })
+        .eq('id', ticket?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Team updated successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+
+      onRefresh();
+    } catch (err) {
+      console.error('Error updating team:', err);
+      toast({
+        title: 'Error updating team',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
 
   const handleRemoveTag = async (tagId: string) => {
     try {
@@ -184,9 +239,19 @@ export const TicketDetails = ({ ticket, onRefresh }: TicketDetailsProps) => {
           <Text color="gray.500" fontSize="sm">
             Created by: {ticket.creator.full_name}
           </Text>
-          <Text color="gray.500" fontSize="sm">
-            Team: {ticket.team?.name || 'No team assigned'}
-          </Text>
+          <Box mt={2}>
+            <Text color="gray.500" fontSize="sm" mb={1}>
+              Team:
+            </Text>
+            {isTeamLeader ? (
+              <TeamSelector
+                currentTeamId={ticket.team?.id || null}
+                onTeamSelected={handleTeamChange}
+              />
+            ) : (
+              <Text>{ticket.team?.name || 'No team assigned'}</Text>
+            )}
+          </Box>
         </Box>
         <IconButton
           aria-label="Delete ticket"
