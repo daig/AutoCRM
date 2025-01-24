@@ -34,24 +34,12 @@ interface Ticket {
   created_at: string;
 }
 
-interface TicketResponse {
-  id: string;
-  title: string;
-  created_at: string;
-  team: {
-    id: string;
-    name: string;
-  };
-  creator: {
-    full_name: string;
-  };
-}
-
-export const TicketManagement = () => {
+const TicketList: React.FC<{
+  searchQuery: string;
+}> = ({ searchQuery }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const toast = useToast();
 
   const fetchTeams = async () => {
@@ -100,7 +88,6 @@ export const TicketManagement = () => {
 
       if (error) throw error;
       
-      // Cast through unknown first
       const responseData = data as unknown as Array<{
         id: string;
         title: string;
@@ -158,7 +145,6 @@ export const TicketManagement = () => {
         duration: 2000,
       });
 
-      // Update local state
       setTickets(prev =>
         prev.map(ticket =>
           ticket.id === ticketId
@@ -188,6 +174,45 @@ export const TicketManagement = () => {
   }
 
   return (
+    <Table variant="simple">
+      <Thead>
+        <Tr>
+          <Th>Title</Th>
+          <Th>Created By</Th>
+          <Th>Created At</Th>
+          <Th>Team</Th>
+        </Tr>
+      </Thead>
+      <Tbody>
+        {tickets.map((ticket) => (
+          <Tr key={ticket.id}>
+            <Td>{ticket.title}</Td>
+            <Td>{ticket.creator.full_name}</Td>
+            <Td>{new Date(ticket.created_at).toLocaleString()}</Td>
+            <Td>
+              <Select
+                value={ticket.team.id}
+                onChange={(e) => handleTeamChange(ticket.id, e.target.value)}
+                width="200px"
+              >
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </Select>
+            </Td>
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
+  );
+};
+
+export const TicketManagement = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+
+  return (
     <VStack spacing={4} align="stretch">
       <Text fontSize="xl" fontWeight="bold">Ticket Management</Text>
       
@@ -202,38 +227,7 @@ export const TicketManagement = () => {
         />
       </InputGroup>
 
-      <Table variant="simple">
-        <Thead>
-          <Tr>
-            <Th>Title</Th>
-            <Th>Created By</Th>
-            <Th>Created At</Th>
-            <Th>Team</Th>
-          </Tr>
-        </Thead>
-        <Tbody>
-          {tickets.map((ticket) => (
-            <Tr key={ticket.id}>
-              <Td>{ticket.title}</Td>
-              <Td>{ticket.creator.full_name}</Td>
-              <Td>{new Date(ticket.created_at).toLocaleString()}</Td>
-              <Td>
-                <Select
-                  value={ticket.team.id}
-                  onChange={(e) => handleTeamChange(ticket.id, e.target.value)}
-                  width="200px"
-                >
-                  {teams.map((team) => (
-                    <option key={team.id} value={team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </Select>
-              </Td>
-            </Tr>
-          ))}
-        </Tbody>
-      </Table>
+      <TicketList searchQuery={searchQuery} />
     </VStack>
   );
 }; 
