@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Box,
   Tabs,
@@ -15,9 +15,14 @@ import { TicketManagement } from '../components/admin/TicketManagement';
 
 const AdminPage: React.FC = () => {
   const userManagementRef = useRef<{ refreshUsers: () => void } | null>(null);
+  const ticketManagementRef = useRef<{ handleTeamsChange: () => void } | null>(null);
 
   const handleTeamMembershipChange = () => {
     userManagementRef.current?.refreshUsers();
+  };
+
+  const handleTeamsChange = () => {
+    ticketManagementRef.current?.handleTeamsChange();
   };
 
   return (
@@ -36,10 +41,13 @@ const AdminPage: React.FC = () => {
             <UserManagement ref={userManagementRef} />
           </TabPanel>
           <TabPanel>
-            <TeamManagement onTeamMembershipChange={handleTeamMembershipChange} />
+            <TeamManagement 
+              onTeamMembershipChange={handleTeamMembershipChange}
+              onTeamsChange={handleTeamsChange}
+            />
           </TabPanel>
           <TabPanel>
-            <TicketManagement />
+            <TicketManagement ref={ticketManagementRef} />
           </TabPanel>
           <TabPanel>
             <TagManagement />

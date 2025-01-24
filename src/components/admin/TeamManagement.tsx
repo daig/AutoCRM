@@ -43,9 +43,13 @@ interface TeamMember {
 
 interface TeamManagementProps {
   onTeamMembershipChange?: () => void;
+  onTeamsChange?: () => void;
 }
 
-export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembershipChange }) => {
+export const TeamManagement: React.FC<TeamManagementProps> = ({ 
+  onTeamMembershipChange,
+  onTeamsChange
+}) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamMembers, setTeamMembers] = useState<Record<string, TeamMember[]>>({});
   const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
@@ -148,6 +152,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
     toast({ title: 'Team created', status: 'success', duration: 3000 });
     setNewTeam({ name: '', description: '' });
     fetchTeams();
+    onTeamsChange?.();
   };
 
   const handleDeleteTeam = async (team: Team) => {
@@ -201,6 +206,7 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
     setTeamToDelete(null);
     onDeleteClose();
     onTeamMembershipChange?.();
+    onTeamsChange?.();
   };
 
   const handleAddMember = async () => {

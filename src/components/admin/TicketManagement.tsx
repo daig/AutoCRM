@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Box,
   Table,
@@ -41,9 +41,12 @@ interface Ticket {
   created_at: string;
 }
 
-const TicketList: React.FC<{
+interface TicketListProps {
   searchQuery: string;
-}> = ({ searchQuery }) => {
+  refreshTrigger?: number;
+}
+
+const TicketList: React.FC<TicketListProps> = ({ searchQuery, refreshTrigger }) => {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,7 +135,7 @@ const TicketList: React.FC<{
 
   useEffect(() => {
     fetchTeams();
-  }, []);
+  }, [refreshTrigger]);
 
   useEffect(() => {
     fetchTickets();
@@ -303,8 +306,21 @@ const TicketList: React.FC<{
   );
 };
 
-export const TicketManagement = () => {
+export interface TicketManagementRef {
+  handleTeamsChange: () => void;
+}
+
+export const TicketManagement = forwardRef<TicketManagementRef>((_, ref) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
+  const handleTeamsChange = () => {
+    setRefreshCounter(prev => prev + 1);
+  };
+
+  useImperativeHandle(ref, () => ({
+    handleTeamsChange
+  }));
 
   return (
     <VStack spacing={4} align="stretch">
@@ -321,7 +337,10 @@ export const TicketManagement = () => {
         />
       </InputGroup>
 
-      <TicketList searchQuery={searchQuery} />
+      <TicketList 
+        searchQuery={searchQuery} 
+        refreshTrigger={refreshCounter}
+      />
     </VStack>
   );
-}; 
+}); 
