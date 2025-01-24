@@ -124,7 +124,7 @@ CREATE INDEX idx_metadata_field_types_value_type ON public.ticket_metadata_field
 CREATE TABLE public.ticket_metadata (
     id              uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
     ticket          uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    field_type      uuid NOT NULL REFERENCES public.ticket_metadata_field_types (id),
+    field_type      uuid NOT NULL REFERENCES public.ticket_metadata_field_types (id) ON DELETE CASCADE,
     field_value_text text,
     field_value_int integer CHECK (field_value_int >= 0),
     field_value_float double precision,
