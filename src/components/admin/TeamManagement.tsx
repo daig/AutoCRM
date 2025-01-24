@@ -66,20 +66,25 @@ export const TeamManagement: React.FC<TeamManagementProps> = ({ onTeamMembership
   };
 
   const fetchTeamMembers = async (teamId: string) => {
+    console.log('Fetching team members for team:', teamId);
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name, is_team_lead')
       .eq('team_id', teamId);
 
     if (error) {
+      console.error('Error fetching team members:', error);
       toast({ title: 'Error fetching team members', status: 'error', duration: 3000 });
       return;
     }
 
-    setTeamMembers(prev => ({
-      ...prev,
-      [teamId]: data as TeamMember[],
-    }));
+    console.log('Fetched team members:', data);
+    // Create a new object reference to ensure React detects the state change
+    setTeamMembers(prev => {
+      const newState = { ...prev };
+      newState[teamId] = data as TeamMember[];
+      return newState;
+    });
   };
 
   const fetchAvailableUsers = async () => {
