@@ -21,7 +21,7 @@ create table public.ticket_tags (
 );
 
 -- create a function to validate one tag per type per ticket
-create or replace function validate_one_tag_per_type()
+create or replace function trigger.validate_one_tag_per_type()
 returns trigger as $$
 begin
     -- check if ticket already has a tag of the same type
@@ -44,7 +44,7 @@ $$ language plpgsql;
 create trigger enforce_one_tag_per_type
     before insert or update on public.ticket_tags
     for each row
-    execute function validate_one_tag_per_type();
+    execute function trigger.validate_one_tag_per_type();
 
 -- Tag-related indexes
 -- Speeds up finding all tags of a specific type (e.g., "show me all priority tags")
@@ -58,4 +58,4 @@ create index idx_ticket_tags_tag  on public.ticket_tags (tag);
 create trigger update_ticket_timestamp_tags
     AFTER insert or update or delete on public.ticket_tags
     for each row
-    execute function update_ticket_updated_at();
+    execute function trigger.update_ticket_updated_at();

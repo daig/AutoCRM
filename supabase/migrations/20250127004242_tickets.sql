@@ -34,7 +34,7 @@ create table public.tickets (
 );
 
 --- TRIGGERS ---
-create or replace function update_ticket_updated_at()
+create or replace function trigger.update_ticket_updated_at()
 returns trigger as $$
 begin
     if TG_TABLE_NAME = 'tickets' then
@@ -53,4 +53,4 @@ $$ language plpgsql;
 create trigger update_ticket_timestamp
     before update on public.tickets
     for each row
-    execute function update_ticket_updated_at();
+    execute function trigger.update_ticket_updated_at();

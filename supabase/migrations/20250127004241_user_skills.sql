@@ -30,7 +30,7 @@ create table public.agent_skills (
 );
 
 -- create a function to validate agent role
-create or replace function validate_agent_role()
+create or replace function trigger.validate_agent_role()
 returns trigger as $$
 begin
     if not exists (
@@ -48,10 +48,10 @@ $$ language plpgsql;
 create trigger enforce_agent_role
     before insert or update on public.agent_skills
     for each row
-    execute function validate_agent_role();
+    execute function trigger.validate_agent_role();
 
 -- create a function to validate proficiency belongs to skill
-create or replace function validate_proficiency_skill()
+create or replace function trigger.validate_proficiency_skill()
 returns trigger as $$
 begin
     -- check if the proficiency belongs to the correct skill
@@ -70,7 +70,7 @@ $$ language plpgsql;
 create trigger enforce_valid_proficiency
     before insert or update on public.agent_skills
     for each row
-    execute function validate_proficiency_skill();
+    execute function trigger.validate_proficiency_skill();
 
 -- Indexes for performance
 create index idx_proficiencies_skill on public.proficiencies (skill);

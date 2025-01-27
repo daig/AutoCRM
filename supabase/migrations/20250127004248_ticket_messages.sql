@@ -1,4 +1,3 @@
-
 --- MESSAGES ---
 -- Users can post messages to tickets
 create table public.ticket_messages (
@@ -13,4 +12,4 @@ create table public.ticket_messages (
 create trigger update_ticket_timestamp_messages
     AFTER insert or update or delete on public.ticket_messages
     for each row
-    execute function update_ticket_updated_at();
+    execute function trigger.update_ticket_updated_at();

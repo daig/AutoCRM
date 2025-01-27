@@ -82,7 +82,7 @@ create index idx_ticket_metadata_text_trigram on public.ticket_metadata USING GI
 --= Triggers =--
 
 -- validate field value type matches the field type
-create or replace function validate_metadata_field_value()
+create or replace function trigger.validate_metadata_field_value()
 returns trigger as $$
 begin
     -- Get the value_type for this field
@@ -137,9 +137,9 @@ $$ language plpgsql;
 create trigger validate_metadata_field_value_trigger
     before insert or update on ticket_metadata
     for each row
-    execute function validate_metadata_field_value();
+    execute function trigger.validate_metadata_field_value();
 
 create trigger update_ticket_timestamp_metadata
     AFTER insert or update or delete on public.ticket_metadata
     for each row
-    execute function update_ticket_updated_at();
+    execute function trigger.update_ticket_updated_at();
