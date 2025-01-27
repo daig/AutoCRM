@@ -1,62 +1,62 @@
 --- TICKETS ---
 
--- Create a default namespace for v5 UUIDs
-CREATE OR REPLACE FUNCTION gen_namespace_v5()
-RETURNS uuid AS $$
-BEGIN
-    -- Using a fixed string to generate a consistent namespace UUID
-    RETURN uuid_generate_v5(uuid_nil(), 'autocrm.default.namespace');
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+-- create a default namespace for v5 UUIDs
+create or replace function gen_namespace_v5()
+returns uuid as $$
+begin
+    -- Using a fixed string to generate a consistent namespace uuid
+    return uuid_generate_v5(uuid_nil(), 'autocrm.default.namespace');
+end;
+$$ language plpgsql immutable;
 
--- Create a function to generate the triage team ID
-CREATE OR REPLACE FUNCTION get_triage_team_id()
-RETURNS uuid AS $$
-BEGIN
-    -- Using the namespace to generate a consistent UUID for the triage team
-    RETURN uuid_generate_v5(gen_namespace_v5(), 'triage.team');
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+-- create a function to generate the triage team ID
+create or replace function get_triage_team_id()
+returns uuid as $$
+begin
+    -- Using the namespace to generate a consistent uuid for the triage team
+    return uuid_generate_v5(gen_namespace_v5(), 'triage.team');
+end;
+$$ language plpgsql immutable;
 
--- Insert the triage team if it doesn't exist
-INSERT INTO public.teams (id, name, description)
-VALUES (get_triage_team_id(), 'Triage', 'Default team for new tickets')
-ON CONFLICT (id) DO NOTHING;
+-- insert the triage team if it doesn't exist
+insert into public.teams (id, name, description)
+values (get_triage_team_id(), 'Triage', 'default team for new tickets')
+on conflict (id) do nothing;
 
-CREATE TABLE public.tickets (
-    id            uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    title         text NOT NULL,
+create table public.tickets (
+    id            uuid default uuid_generate_v4() primary key,
+    title         text not null,
     description   text,
-    team          uuid NOT NULL DEFAULT get_triage_team_id() REFERENCES public.teams(id) ON DELETE SET DEFAULT,
-    creator       uuid NOT NULL DEFAULT auth.uid() REFERENCES public.users(id),
-    created_at    timestamp with time zone DEFAULT now(),
-    updated_at    timestamp with time zone DEFAULT now()
+    team          uuid not null default get_triage_team_id() references public.teams(id) on delete set default,
+    creator       uuid not null default auth.uid() references public.users(id),
+    created_at    timestamp with time zone default now(),
+    updated_at    timestamp with time zone default now()
 );
 
 --- TRIGGERS ---
-CREATE OR REPLACE FUNCTION update_ticket_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_TABLE_NAME = 'tickets' THEN
+create or replace function update_ticket_updated_at()
+returns trigger as $$
+begin
+    if TG_TABLE_NAME = 'tickets' then
         NEW.updated_at = now();
-        RETURN NEW;
-    ELSE
-        -- For related tables, update the referenced ticket
-        UPDATE public.tickets 
-        SET updated_at = now() 
-        WHERE id = (
-            CASE TG_TABLE_NAME
-                WHEN 'ticket_messages' THEN NEW.ticket
-                WHEN 'ticket_tags' THEN NEW.ticket  
-                WHEN 'ticket_metadata' THEN NEW.ticket
-            END
+        return NEW;
+    else
+        -- for related tables, update the referenced ticket
+        update public.tickets 
+        set updated_at = now() 
+        where id = (
+            case TG_TABLE_NAME
+                when 'ticket_messages' then NEW.ticket
+                when 'ticket_tags' then NEW.ticket  
+                when 'ticket_metadata' then NEW.ticket
+            end
         );
-        RETURN NEW;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
+        return NEW;
+    end if;
+end;
+$$ language plpgsql;
 
-CREATE TRIGGER update_ticket_timestamp
-    BEFORE UPDATE ON public.tickets
-    FOR EACH ROW
-    EXECUTE FUNCTION update_ticket_updated_at();
+create trigger update_ticket_timestamp
+    before update on public.tickets
+    for each row
+    execute function update_ticket_updated_at();

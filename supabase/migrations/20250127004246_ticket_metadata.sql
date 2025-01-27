@@ -1,5 +1,5 @@
 -- tickets can be assigned key-value metadata fields
-CREATE TYPE public.metadata_value_type AS ENUM (
+create TYPE public.metadata_value_type as ENUM (
     'text',
     'natural number',
     'fractional number',
@@ -10,136 +10,136 @@ CREATE TYPE public.metadata_value_type AS ENUM (
     'ticket'
 );
 
-CREATE TABLE public.ticket_metadata_field_types (
-    id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    name        text NOT NULL UNIQUE CHECK (length(name) BETWEEN 1 AND 50),
-    value_type  public.metadata_value_type NOT NULL,
-    description text CHECK (length(description) <= 500)
+create table public.ticket_metadata_field_types (
+    id          uuid default uuid_generate_v4() primary key,
+    name        text not null unique check (length(name) BETWEEN 1 AND 50),
+    value_type  public.metadata_value_type not null,
+    description text check (length(description) <= 500)
 );
 
 -- Metadata field type indexes
 -- Enables quick filtering of field types by their value type (e.g., "show me all date fields")
-CREATE INDEX idx_metadata_field_types_value_type ON public.ticket_metadata_field_types (value_type);
+create index idx_metadata_field_types_value_type on public.ticket_metadata_field_types (value_type);
 
-CREATE TABLE public.ticket_metadata (
-    id              uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    ticket          uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    field_type      uuid NOT NULL REFERENCES public.ticket_metadata_field_types (id) ON DELETE CASCADE,
+create table public.ticket_metadata (
+    id              uuid default uuid_generate_v4() primary key,
+    ticket          uuid not null references public.tickets (id) on delete cascade,
+    field_type      uuid not null references public.ticket_metadata_field_types (id) on delete cascade,
     field_value_text text,
-    field_value_int integer CHECK (field_value_int >= 0),
+    field_value_int integer check (field_value_int >= 0),
     field_value_float double precision,
     field_value_bool boolean,
     field_value_date date,
     field_value_timestamp timestamp with time zone,
-    field_value_user uuid REFERENCES public.users (id),
-    field_value_ticket uuid REFERENCES public.tickets (id),
-    created_at      timestamp with time zone DEFAULT now(),
-    updated_at      timestamp with time zone DEFAULT now(),
-    UNIQUE (ticket, field_type),
+    field_value_user uuid references public.users (id),
+    field_value_ticket uuid references public.tickets (id),
+    created_at      timestamp with time zone default now(),
+    updated_at      timestamp with time zone default now(),
+    unique (ticket, field_type),
     -- Ensure exactly one value type is set based on the field_type's value_type
-    CONSTRAINT one_value_type_set CHECK (
-        (CASE WHEN field_value_text IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_int IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_float IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_bool IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_date IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_timestamp IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_user IS NOT NULL THEN 1 ELSE 0 END +
-         CASE WHEN field_value_ticket IS NOT NULL THEN 1 ELSE 0 END) = 1
+    constraint one_value_type_set check (
+        (case when field_value_text IS not null then 1 else 0 end +
+         case when field_value_int IS not null then 1 else 0 end +
+         case when field_value_float IS not null then 1 else 0 end +
+         case when field_value_bool IS not null then 1 else 0 end +
+         case when field_value_date IS not null then 1 else 0 end +
+         case when field_value_timestamp IS not null then 1 else 0 end +
+         case when field_value_user IS not null then 1 else 0 end +
+         case when field_value_ticket IS not null then 1 else 0 end) = 1
     )
 );
 
 -- Core metadata indexes
 -- Enables efficient time-based queries (e.g., "find the 30 most recently updated tickets")
-CREATE INDEX idx_ticket_metadata_created_at ON public.ticket_metadata (created_at);
-CREATE INDEX idx_ticket_metadata_updated_at ON public.ticket_metadata (updated_at);
+create index idx_ticket_metadata_created_at on public.ticket_metadata (created_at);
+create index idx_ticket_metadata_updated_at on public.ticket_metadata (updated_at);
 
 -- Type-specific partial indexes
 -- These indexes only include rows where the specific value type is not null
 -- This makes them smaller and more efficient than full column indexes
--- Each index optimizes queries filtering by that specific value type
+-- each index optimizes queries filtering by that specific value type
 
--- For text search in metadata (e.g., "find tickets where text field contains 'xyz'")
-CREATE INDEX idx_ticket_metadata_text ON public.ticket_metadata (field_value_text) WHERE field_value_text IS NOT NULL;
--- For numeric range queries (e.g., "find tickets where priority > 5")
-CREATE INDEX idx_ticket_metadata_int ON public.ticket_metadata (field_value_int) WHERE field_value_int IS NOT NULL;
--- For decimal number ranges (e.g., "find tickets with score between 0.8 and 1.0")
-CREATE INDEX idx_ticket_metadata_float ON public.ticket_metadata (field_value_float) WHERE field_value_float IS NOT NULL;
--- For boolean filters (e.g., "find all tickets where 'is_resolved' is true")
-CREATE INDEX idx_ticket_metadata_bool ON public.ticket_metadata (field_value_bool) WHERE field_value_bool IS NOT NULL;
--- For date-based filtering (e.g., "find tickets due on specific date")
-CREATE INDEX idx_ticket_metadata_date ON public.ticket_metadata (field_value_date) WHERE field_value_date IS NOT NULL;
--- For timestamp-based queries (e.g., "find tickets with activity in last hour")
-CREATE INDEX idx_ticket_metadata_timestamp ON public.ticket_metadata (field_value_timestamp) WHERE field_value_timestamp IS NOT NULL;
--- For finding tickets linked to specific users (e.g., "show tickets assigned to user X")
-CREATE INDEX idx_ticket_metadata_user ON public.ticket_metadata (field_value_user) WHERE field_value_user IS NOT NULL;
--- For finding tickets with references to other tickets (e.g., "find all blockers of ticket X")
-CREATE INDEX idx_ticket_metadata_ticket_ref ON public.ticket_metadata (field_value_ticket) WHERE field_value_ticket IS NOT NULL;
+-- for text search in metadata (e.g., "find tickets where text field contains 'xyz'")
+create index idx_ticket_metadata_text on public.ticket_metadata (field_value_text) where field_value_text IS not null;
+-- for numeric range queries (e.g., "find tickets where priority > 5")
+create index idx_ticket_metadata_int on public.ticket_metadata (field_value_int) where field_value_int IS not null;
+-- for decimal number ranges (e.g., "find tickets with score between 0.8 and 1.0")
+create index idx_ticket_metadata_float on public.ticket_metadata (field_value_float) where field_value_float IS not null;
+-- for boolean filters (e.g., "find all tickets where 'is_resolved' is true")
+create index idx_ticket_metadata_bool on public.ticket_metadata (field_value_bool) where field_value_bool IS not null;
+-- for date-based filtering (e.g., "find tickets due on specific date")
+create index idx_ticket_metadata_date on public.ticket_metadata (field_value_date) where field_value_date IS not null;
+-- for timestamp-based queries (e.g., "find tickets with activity in last hour")
+create index idx_ticket_metadata_timestamp on public.ticket_metadata (field_value_timestamp) where field_value_timestamp IS not null;
+-- for finding tickets linked to specific users (e.g., "show tickets assigned to user X")
+create index idx_ticket_metadata_user on public.ticket_metadata (field_value_user) where field_value_user IS not null;
+-- for finding tickets with references to other tickets (e.g., "find all blockers of ticket X")
+create index idx_ticket_metadata_ticket_ref on public.ticket_metadata (field_value_ticket) where field_value_ticket IS not null;
 
--- Add GIN index for trigram search on text metadata values
-CREATE INDEX idx_ticket_metadata_text_trigram ON public.ticket_metadata USING GIN (field_value_text gin_trgm_ops) WHERE field_value_text IS NOT NULL;
+-- add GIN index for trigram search on text metadata values
+create index idx_ticket_metadata_text_trigram on public.ticket_metadata USING GIN (field_value_text gin_trgm_ops) where field_value_text IS not null;
 
 --= Triggers =--
 
 -- validate field value type matches the field type
-CREATE OR REPLACE FUNCTION validate_metadata_field_value()
-RETURNS TRIGGER AS $$
-BEGIN
+create or replace function validate_metadata_field_value()
+returns trigger as $$
+begin
     -- Get the value_type for this field
     DECLARE
         field_value_type text;
-    BEGIN
-        SELECT value_type INTO field_value_type
+    begin
+        SELECT value_type into field_value_type
         FROM ticket_metadata_field_types
-        WHERE id = NEW.field_type;
+        where id = NEW.field_type;
 
         -- Validate that the correct field is set based on value_type
-        CASE field_value_type
-            WHEN 'text' THEN
-                IF NEW.field_value_text IS NULL THEN
+        case field_value_type
+            when 'text' then
+                if NEW.field_value_text IS null then
                     RAISE EXCEPTION 'field_value_text must be set for text fields';
-                END IF;
-            WHEN 'natural number' THEN
-                IF NEW.field_value_int IS NULL THEN
+                end if;
+            when 'natural number' then
+                if NEW.field_value_int IS null then
                     RAISE EXCEPTION 'field_value_int must be set for natural number fields';
-                END IF;
-            WHEN 'fractional number' THEN
-                IF NEW.field_value_float IS NULL THEN
+                end if;
+            when 'fractional number' then
+                if NEW.field_value_float IS null then
                     RAISE EXCEPTION 'field_value_float must be set for fractional number fields';
-                END IF;
-            WHEN 'boolean' THEN
-                IF NEW.field_value_bool IS NULL THEN
+                end if;
+            when 'boolean' then
+                if NEW.field_value_bool IS null then
                     RAISE EXCEPTION 'field_value_bool must be set for boolean fields';
-                END IF;
-            WHEN 'date' THEN
-                IF NEW.field_value_date IS NULL THEN
+                end if;
+            when 'date' then
+                if NEW.field_value_date IS null then
                     RAISE EXCEPTION 'field_value_date must be set for date fields';
-                END IF;
-            WHEN 'timestamp' THEN
-                IF NEW.field_value_timestamp IS NULL THEN
+                end if;
+            when 'timestamp' then
+                if NEW.field_value_timestamp IS null then
                     RAISE EXCEPTION 'field_value_timestamp must be set for timestamp fields';
-                END IF;
-            WHEN 'user' THEN
-                IF NEW.field_value_user IS NULL THEN
+                end if;
+            when 'user' then
+                if NEW.field_value_user IS null then
                     RAISE EXCEPTION 'field_value_user must be set for user reference fields';
-                END IF;
-            WHEN 'ticket' THEN
-                IF NEW.field_value_ticket IS NULL THEN
+                end if;
+            when 'ticket' then
+                if NEW.field_value_ticket IS null then
                     RAISE EXCEPTION 'field_value_ticket must be set for ticket reference fields';
-                END IF;
-        END CASE;
-    END;
+                end if;
+        end case;
+    end;
     
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+    return NEW;
+end;
+$$ language plpgsql;
 
-CREATE TRIGGER validate_metadata_field_value_trigger
-    BEFORE INSERT OR UPDATE ON ticket_metadata
-    FOR EACH ROW
-    EXECUTE FUNCTION validate_metadata_field_value();
+create trigger validate_metadata_field_value_trigger
+    before insert or update on ticket_metadata
+    for each row
+    execute function validate_metadata_field_value();
 
-CREATE TRIGGER update_ticket_timestamp_metadata
-    AFTER INSERT OR UPDATE OR DELETE ON public.ticket_metadata
-    FOR EACH ROW
-    EXECUTE FUNCTION update_ticket_updated_at();
+create trigger update_ticket_timestamp_metadata
+    AFTER insert or update or delete on public.ticket_metadata
+    for each row
+    execute function update_ticket_updated_at();

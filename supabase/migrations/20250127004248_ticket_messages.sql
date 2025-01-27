@@ -1,16 +1,16 @@
 
 --- MESSAGES ---
 -- Users can post messages to tickets
-CREATE TABLE public.ticket_messages (
-    id           uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    ticket    uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    sender    uuid REFERENCES public.users (id),
-    content      text NOT NULL,
-    created_at   timestamp with time zone DEFAULT now()
+create table public.ticket_messages (
+    id           uuid default uuid_generate_v4() primary key,
+    ticket    uuid not null references public.tickets (id) on delete cascade,
+    sender    uuid references public.users (id),
+    content      text not null,
+    created_at   timestamp with time zone default now()
 ); 
 
--- Trigger for messages
-CREATE TRIGGER update_ticket_timestamp_messages
-    AFTER INSERT OR UPDATE OR DELETE ON public.ticket_messages
-    FOR EACH ROW
-    EXECUTE FUNCTION update_ticket_updated_at();
+-- trigger for messages
+create trigger update_ticket_timestamp_messages
+    AFTER insert or update or delete on public.ticket_messages
+    for each row
+    execute function update_ticket_updated_at();

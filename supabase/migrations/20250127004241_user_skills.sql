@@ -1,4 +1,4 @@
--- Migration: Create User Skills and Proficiencies
+-- Migration: create User Skills and Proficiencies
 -- Description: Adds tables for tracking user skills and proficiency levels
 -- Similar to the tag system, but for user skills
 
@@ -29,7 +29,7 @@ create table public.agent_skills (
     primary key (agent, proficiency)
 );
 
--- Create a function to validate agent role
+-- create a function to validate agent role
 create or replace function validate_agent_role()
 returns trigger as $$
 begin
@@ -44,17 +44,17 @@ begin
 end;
 $$ language plpgsql;
 
--- Create trigger to enforce agent role
+-- create trigger to enforce agent role
 create trigger enforce_agent_role
     before insert or update on public.agent_skills
     for each row
     execute function validate_agent_role();
 
--- Create a function to validate proficiency belongs to skill
+-- create a function to validate proficiency belongs to skill
 create or replace function validate_proficiency_skill()
 returns trigger as $$
 begin
-    -- Check if the proficiency belongs to the correct skill
+    -- check if the proficiency belongs to the correct skill
     if not exists (
         select 1
         from public.proficiencies p
@@ -66,7 +66,7 @@ begin
 end;
 $$ language plpgsql;
 
--- Create trigger to enforce valid proficiency for skill
+-- create trigger to enforce valid proficiency for skill
 create trigger enforce_valid_proficiency
     before insert or update on public.agent_skills
     for each row
