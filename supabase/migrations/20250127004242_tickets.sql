@@ -19,16 +19,16 @@ end;
 $$ language plpgsql immutable;
 
 -- insert the triage team if it doesn't exist
-insert into public.teams (id, name, description)
+insert into teams (id, name, description)
 values (get_triage_team_id(), 'Triage', 'default team for new tickets')
 on conflict (id) do nothing;
 
-create table public.tickets (
+create table tickets (
     id            uuid default uuid_generate_v4() primary key,
     title         text not null,
     description   text,
-    team          uuid not null default get_triage_team_id() references public.teams(id) on delete set default,
-    creator       uuid not null default auth.uid() references public.users(id),
+    team          uuid not null default get_triage_team_id() references teams(id) on delete set default,
+    creator       uuid not null default auth.uid() references users(id),
     created_at    timestamp with time zone default now(),
     updated_at    timestamp with time zone default now()
 );
@@ -42,7 +42,7 @@ begin
         return NEW;
     else
         -- for related tables, update the referenced ticket
-        update public.tickets 
+        update tickets 
         set updated_at = now() 
         where id = NEW.ticket;
         return NEW;
@@ -51,6 +51,6 @@ end;
 $$ language plpgsql;
 
 create trigger trg_update_ticket_updated_at
-    before update on public.tickets
+    before update on tickets
     for each row
     execute function trigger.update_ticket_updated_at();
