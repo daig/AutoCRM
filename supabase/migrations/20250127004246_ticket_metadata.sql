@@ -1,100 +1,3 @@
---- TICKETS ---
-
--- Create a default namespace for v5 UUIDs
-CREATE OR REPLACE FUNCTION gen_namespace_v5()
-RETURNS uuid AS $$
-BEGIN
-    -- Using a fixed string to generate a consistent namespace UUID
-    RETURN uuid_generate_v5(uuid_nil(), 'autocrm.default.namespace');
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
--- Create a function to generate the triage team ID
-CREATE OR REPLACE FUNCTION get_triage_team_id()
-RETURNS uuid AS $$
-BEGIN
-    -- Using the namespace to generate a consistent UUID for the triage team
-    RETURN uuid_generate_v5(gen_namespace_v5(), 'triage.team');
-END;
-$$ LANGUAGE plpgsql IMMUTABLE;
-
--- Insert the triage team if it doesn't exist
-INSERT INTO public.teams (id, name, description)
-VALUES (get_triage_team_id(), 'Triage', 'Default team for new tickets')
-ON CONFLICT (id) DO NOTHING;
-
-CREATE TABLE public.tickets (
-    id            uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    title         text NOT NULL,
-    description   text,
-    team          uuid NOT NULL DEFAULT get_triage_team_id() REFERENCES public.teams(id) ON DELETE SET DEFAULT,
-    creator       uuid NOT NULL DEFAULT auth.uid() REFERENCES public.users(id),
-    created_at    timestamp with time zone DEFAULT now(),
-    updated_at    timestamp with time zone DEFAULT now()
-);
-
-
-
-
---- TAGS ---
-
--- tickets can be assigned tags grouped by exclusive types
-CREATE TABLE public.tag_types (
-    id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    name        text NOT NULL UNIQUE CHECK (length(name) BETWEEN 1 AND 50),
-    description text CHECK (length(description) <= 500)
-);
-
-CREATE TABLE public.tags (
-    id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    type_id     uuid NOT NULL REFERENCES public.tag_types (id) ON DELETE CASCADE,
-    name        text NOT NULL CHECK (length(name) BETWEEN 1 AND 50),
-    description text CHECK (length(description) <= 500),
-    UNIQUE (type_id, name)
-);
-
-CREATE TABLE public.ticket_tags (
-    ticket     uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    tag   uuid NOT NULL REFERENCES public.tags (id) ON DELETE CASCADE,
-    created_at    timestamp with time zone DEFAULT now(),
-    PRIMARY KEY (ticket, tag)
-);
-
--- Create a function to validate one tag per type per ticket
-CREATE OR REPLACE FUNCTION validate_one_tag_per_type()
-RETURNS TRIGGER AS $$
-BEGIN
-    -- Check if ticket already has a tag of the same type
-    IF EXISTS (
-        SELECT 1
-        FROM public.ticket_tags tt
-        JOIN public.tags t1 ON tt.tag = t1.id
-        JOIN public.tags t2 ON t2.id = NEW.tag
-        WHERE tt.ticket = NEW.ticket
-        AND t1.type_id = t2.type_id
-        AND tt.tag != NEW.tag
-    ) THEN
-        RAISE EXCEPTION 'Ticket already has a tag of this type';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Create trigger to enforce one tag per type per ticket
-CREATE TRIGGER enforce_one_tag_per_type
-    BEFORE INSERT OR UPDATE ON public.ticket_tags
-    FOR EACH ROW
-    EXECUTE FUNCTION validate_one_tag_per_type();
-
--- Tag-related indexes
--- Speeds up finding all tags of a specific type (e.g., "show me all priority tags")
-CREATE INDEX idx_tags_type_id     ON public.tags (type_id);
--- Enables fast tag search by name across all types (e.g., "find tags containing 'urgent'")
-CREATE INDEX idx_tags_name        ON public.tags (name);
--- Complements the primary key (ticket, tag) to quickly find all tickets with a specific tag
-CREATE INDEX idx_ticket_tags_tag  ON public.ticket_tags (tag);
-
---- METADATA ---
 -- tickets can be assigned key-value metadata fields
 CREATE TYPE public.metadata_value_type AS ENUM (
     'text',
@@ -106,9 +9,6 @@ CREATE TYPE public.metadata_value_type AS ENUM (
     'user',
     'ticket'
 );
-
--- Enable pg_trgm extension for trigram search
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE public.ticket_metadata_field_types (
     id          uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -179,6 +79,8 @@ CREATE INDEX idx_ticket_metadata_ticket_ref ON public.ticket_metadata (field_val
 -- Add GIN index for trigram search on text metadata values
 CREATE INDEX idx_ticket_metadata_text_trigram ON public.ticket_metadata USING GIN (field_value_text gin_trgm_ops) WHERE field_value_text IS NOT NULL;
 
+--= Triggers =--
+
 -- validate field value type matches the field type
 CREATE OR REPLACE FUNCTION validate_metadata_field_value()
 RETURNS TRIGGER AS $$
@@ -237,59 +139,6 @@ CREATE TRIGGER validate_metadata_field_value_trigger
     FOR EACH ROW
     EXECUTE FUNCTION validate_metadata_field_value();
 
---- MESSAGES ---
--- Users can post messages to tickets
-CREATE TABLE public.ticket_messages (
-    id           uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
-    ticket    uuid NOT NULL REFERENCES public.tickets (id) ON DELETE CASCADE,
-    sender    uuid REFERENCES public.users (id),
-    content      text NOT NULL,
-    created_at   timestamp with time zone DEFAULT now()
-); 
-
-
---- TRIGGERS ---
-CREATE OR REPLACE FUNCTION update_ticket_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF TG_TABLE_NAME = 'tickets' THEN
-        NEW.updated_at = now();
-        RETURN NEW;
-    ELSE
-        -- For related tables, update the referenced ticket
-        UPDATE public.tickets 
-        SET updated_at = now() 
-        WHERE id = (
-            CASE TG_TABLE_NAME
-                WHEN 'ticket_messages' THEN NEW.ticket
-                WHEN 'ticket_tags' THEN NEW.ticket  
-                WHEN 'ticket_metadata' THEN NEW.ticket
-            END
-        );
-        RETURN NEW;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger for direct ticket updates
-CREATE TRIGGER update_ticket_timestamp
-    BEFORE UPDATE ON public.tickets
-    FOR EACH ROW
-    EXECUTE FUNCTION update_ticket_updated_at();
-
--- Trigger for messages
-CREATE TRIGGER update_ticket_timestamp_messages
-    AFTER INSERT OR UPDATE OR DELETE ON public.ticket_messages
-    FOR EACH ROW
-    EXECUTE FUNCTION update_ticket_updated_at();
-
--- Trigger for tags
-CREATE TRIGGER update_ticket_timestamp_tags
-    AFTER INSERT OR UPDATE OR DELETE ON public.ticket_tags
-    FOR EACH ROW
-    EXECUTE FUNCTION update_ticket_updated_at();
-
--- Trigger for metadata
 CREATE TRIGGER update_ticket_timestamp_metadata
     AFTER INSERT OR UPDATE OR DELETE ON public.ticket_metadata
     FOR EACH ROW
