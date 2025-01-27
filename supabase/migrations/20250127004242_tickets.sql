@@ -44,13 +44,7 @@ begin
         -- for related tables, update the referenced ticket
         update public.tickets 
         set updated_at = now() 
-        where id = (
-            case TG_TABLE_NAME
-                when 'ticket_messages' then NEW.ticket
-                when 'ticket_tags' then NEW.ticket  
-                when 'ticket_metadata' then NEW.ticket
-            end
-        );
+        where id = NEW.ticket;
         return NEW;
     end if;
 end;
