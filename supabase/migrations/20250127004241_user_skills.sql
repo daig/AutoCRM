@@ -45,7 +45,7 @@ end;
 $$ language plpgsql;
 
 -- create trigger to enforce agent role
-create trigger enforce_agent_role
+create trigger trg_validate_agent_role
     before insert or update on public.agent_skills
     for each row
     execute function trigger.validate_agent_role();
@@ -67,7 +67,7 @@ end;
 $$ language plpgsql;
 
 -- create trigger to enforce valid proficiency for skill
-create trigger enforce_valid_proficiency
+create trigger trg_validate_proficiency_skill
     before insert or update on public.agent_skills
     for each row
     execute function trigger.validate_proficiency_skill();

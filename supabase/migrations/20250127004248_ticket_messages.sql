@@ -9,7 +9,7 @@ create table public.ticket_messages (
 ); 
 
 -- trigger for messages
-create trigger update_ticket_timestamp_messages
+create trigger trg_update_ticket_updated_at
     AFTER insert or update or delete on public.ticket_messages
     for each row
     execute function trigger.update_ticket_updated_at();

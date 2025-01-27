@@ -50,7 +50,7 @@ begin
 end;
 $$ language plpgsql;
 
-create trigger update_ticket_timestamp
+create trigger trg_update_ticket_updated_at
     before update on public.tickets
     for each row
     execute function trigger.update_ticket_updated_at();

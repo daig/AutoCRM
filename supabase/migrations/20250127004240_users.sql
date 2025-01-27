@@ -24,6 +24,7 @@ begin
 end;
 $$ language plpgsql SECURITY DEFINER;
 
-create trigger on_auth_user_created
-    AFTER insert on auth.users
-    for each row execute function public.handle_new_user();
+create trigger trg_handle_new_user
+    after insert on auth.users
+    for each row
+    execute function public.handle_new_user();

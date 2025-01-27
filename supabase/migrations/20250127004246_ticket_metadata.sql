@@ -134,12 +134,12 @@ begin
 end;
 $$ language plpgsql;
 
-create trigger validate_metadata_field_value_trigger
+create trigger trg_validate_metadata_field_value
     before insert or update on ticket_metadata
     for each row
     execute function trigger.validate_metadata_field_value();
 
-create trigger update_ticket_timestamp_metadata
+create trigger trg_update_ticket_updated_at
     AFTER insert or update or delete on public.ticket_metadata
     for each row
     execute function trigger.update_ticket_updated_at();

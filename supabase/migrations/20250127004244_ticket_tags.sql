@@ -41,7 +41,7 @@ end;
 $$ language plpgsql;
 
 -- create trigger to enforce one tag per type per ticket
-create trigger enforce_one_tag_per_type
+create trigger trg_validate_one_tag_per_type
     before insert or update on public.ticket_tags
     for each row
     execute function trigger.validate_one_tag_per_type();
@@ -55,7 +55,7 @@ create index idx_tags_name        on public.tags (name);
 create index idx_ticket_tags_tag  on public.ticket_tags (tag);
 
 -- trigger for tags
-create trigger update_ticket_timestamp_tags
+create trigger trg_update_ticket_updated_at
     AFTER insert or update or delete on public.ticket_tags
     for each row
     execute function trigger.update_ticket_updated_at();
