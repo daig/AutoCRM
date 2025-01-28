@@ -51,7 +51,8 @@ function AdminRoute({ children }: { children: JSX.Element }) {
   }
 
   if (userRole !== 'administrator') {
-    return <Navigate to="/crm" replace />;
+    // If authenticated but wrong role, redirect to home
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -106,7 +107,33 @@ function ManagerRoute({ children }: { children: JSX.Element }) {
 
   // Only redirect if we've finished checking and user is not a team lead
   if (!isChecking && !isTeamLead) {
-    return <Navigate to="/crm" replace />;
+    // If authenticated but not a team lead, redirect to home
+    return <Navigate to="/" replace />;
+  }
+
+  return children;
+}
+
+// Auth Route wrapper component
+function AuthRoute({ children }: { children: JSX.Element }) {
+  const { isAuthenticated, isLoading } = useUser();
+  const location = useLocation();
+  
+  if (isLoading) {
+    return (
+      <Center h="100vh">
+        <Spinner size="xl" />
+      </Center>
+    );
+  }
+
+  if (isAuthenticated) {
+    // If we have a saved location, go there
+    if (location.state?.from) {
+      return <Navigate to={location.state.from.pathname} replace />;
+    }
+    // If we're on login/signup and there's no saved location, go to home
+    return <Navigate to="/" replace />;
   }
 
   return children;
@@ -118,8 +145,16 @@ function App() {
       <UserProvider>
         <Router>
           <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/login" element={
+              <AuthRoute>
+                <LoginPage />
+              </AuthRoute>
+            } />
+            <Route path="/signup" element={
+              <AuthRoute>
+                <SignupPage />
+              </AuthRoute>
+            } />
             <Route path="/crm" element={
               <ProtectedRoute>
                 <Layout>

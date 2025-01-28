@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '../config/supabase';
+import { Session } from '@supabase/supabase-js';
 
 type UserRole = 'administrator' | 'agent' | 'customer' | null;
 
@@ -9,6 +10,7 @@ interface UserContextType {
   userRole: UserRole;
   isAuthenticated: boolean;
   isLoading: boolean;
+  session: Session | null;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -17,6 +19,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
 
   const fetchUserRole = async (uid: string) => {
     try {
@@ -27,47 +30,56 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .single();
       
       if (error) throw error;
-      setUserRole(data.role);
+      return data.role as UserRole;
     } catch (error) {
       console.error('Error fetching user role:', error);
+      return null;
+    }
+  };
+
+  const handleAuthStateChange = async (session: Session | null) => {
+    const uid = session?.user?.id ?? null;
+    
+    // First update the session and userId immediately
+    setSession(session);
+    setUserId(uid);
+
+    if (!uid) {
+      setUserRole(null);
+      return;
+    }
+
+    try {
+      // Then fetch and set the role
+      const role = await fetchUserRole(uid);
+      setUserRole(role);
+    } catch (error) {
+      console.error('Error handling auth state change:', error);
       setUserRole(null);
     }
   };
 
   useEffect(() => {
-    // Check for existing session on mount
-    const initializeAuth = async () => {
-      try {
-        // Get the current session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          setUserId(session.user.id);
-          await fetchUserRole(session.user.id);
+    let mounted = true;
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      handleAuthStateChange(session).finally(() => {
+        if (mounted) {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error checking auth session:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const uid = session?.user?.id ?? null;
-      setUserId(uid);
-      if (uid) {
-        await fetchUserRole(uid);
-      } else {
-        setUserRole(null);
-      }
-      setIsLoading(false);
+      });
     });
 
-    // Cleanup subscription on unmount
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      handleAuthStateChange(session);
+    });
+
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -76,14 +88,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     userId,
     setUserId,
     userRole,
-    isAuthenticated: userId !== null,
-    isLoading
+    isAuthenticated: !!session,
+    isLoading,
+    session
   };
-
-  // Show nothing while checking the session
-  if (isLoading) {
-    return null;
-  }
 
   return (
     <UserContext.Provider value={value}>

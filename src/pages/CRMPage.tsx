@@ -9,7 +9,7 @@ import { useUser } from '../context/UserContext';
 import type { TicketData } from '../types/ticket';
 import type { Database } from '../types/supabase';
 import type { MetadataFilter } from '../components/ticket/TicketMetadataFilter';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { FiUser } from 'react-icons/fi';
 
 type TicketMessage = Database['public']['Tables']['ticket_messages']['Insert'];
@@ -25,6 +25,7 @@ export const CRMPage = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.700');
   const { userId, userRole } = useUser();
   const location = useLocation();
+  const navigate = useNavigate();
   const messageFeedRef = useRef<MessageFeedHandle>(null);
 
   // Add state for assignee filter
@@ -35,19 +36,23 @@ export const CRMPage = () => {
     if (location.state?.clearSelection) {
       setSelectedTicketId(null);
       setSelectedTicket(null);
-      // Clean up the state to prevent clearing on future navigations
-      history.replaceState({}, '');
+      // Instead of using replace, we'll use a regular navigation without state
+      if (location.pathname === '/crm') {
+        navigate('/crm');
+      }
     }
-  }, [location]);
+  }, [location, navigate]);
 
   // Handle ticket selection from navigation state
   useEffect(() => {
     if (location.state?.selectTicketId) {
       setSelectedTicketId(location.state.selectTicketId);
-      // Clean up the state to prevent reselection on future navigations
-      history.replaceState({}, '');
+      // Instead of using replace, we'll use a regular navigation without state
+      if (location.pathname === '/crm') {
+        navigate('/crm');
+      }
     }
-  }, [location]);
+  }, [location, navigate]);
 
   const fetchTickets = useCallback(async (shouldApplyFilters = isFilterEnabled) => {
     try {

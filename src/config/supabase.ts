@@ -14,49 +14,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Create custom storage that expires after 5 minutes
-const customStorage: Storage = {
-  length: window.localStorage.length,
-  key: (index: number) => window.localStorage.key(index),
-  clear: () => window.localStorage.clear(),
-  removeItem: (key: string) => window.localStorage.removeItem(key),
-  setItem: (key: string, value: string) => {
-    // Store the timestamp along with the value
-    const item = {
-      value,
-      timestamp: new Date().getTime(),
-      expiresIn: 5 * 60 * 1000 // 5 minutes in milliseconds
-    };
-    window.localStorage.setItem(key, JSON.stringify(item));
-  },
-  getItem: (key: string) => {
-    const itemStr = window.localStorage.getItem(key);
-    if (!itemStr) return null;
-
-    try {
-      const item = JSON.parse(itemStr);
-      const now = new Date().getTime();
-
-      // Check if the item has expired
-      if (now > item.timestamp + item.expiresIn) {
-        window.localStorage.removeItem(key);
-        return null;
-      }
-      return item.value;
-    } catch (error) {
-      // If there's an error parsing the JSON, return the raw value
-      // This handles cases where the value wasn't set by our custom storage
-      return itemStr;
-    }
-  }
-};
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: false,
+    autoRefreshToken: true,
     persistSession: true,
-    storage: customStorage,
-    storageKey: 'autocrm-auth-token',
     detectSessionInUrl: true,
     flowType: 'pkce'
   },

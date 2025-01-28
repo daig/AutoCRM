@@ -49,8 +49,8 @@ export const LoginPage = () => {
         isClosable: true,
       });
 
-      // Navigate to the protected route the user tried to visit or default to /crm
-      const from = (location.state as any)?.from?.pathname || '/crm';
+      // Get the intended destination from location state or default to home page
+      const from = location.state?.from?.pathname || '/';
       navigate(from, { replace: true });
     } catch (error) {
       toast({
