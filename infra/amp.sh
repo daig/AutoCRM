@@ -44,6 +44,15 @@ while true; do
     --output table
   
   echo
-  echo "Press Ctrl+C to exit..."
-  sleep "$INTERVAL"
+  echo "Press Ctrl+C to exit."
+  
+  # Countdown timer
+  for (( i = INTERVAL; i>0; i-- )); do
+    # Overwrite the same line with a countdown
+    echo -ne "\rRefreshing in $i second(s)..."
+    sleep 1
+  done
+  
+  # Move to a new line before clearing again
+  echo
 done
