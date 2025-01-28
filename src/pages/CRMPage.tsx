@@ -1,4 +1,4 @@
-import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue, HStack, Button, useToast } from '@chakra-ui/react';
+import { Box, Grid, GridItem, Input, IconButton, Flex, useColorModeValue, HStack, Button } from '@chakra-ui/react';
 import { TicketList } from '../components/ticket/TicketList';
 import { TicketDetails } from '../components/ticket/TicketDetails';
 import { MessageFeed, MessageFeedHandle, Message } from '../components/ticket/MessageFeed';
@@ -26,7 +26,6 @@ export const CRMPage = () => {
   const { userId, userRole } = useUser();
   const location = useLocation();
   const messageFeedRef = useRef<MessageFeedHandle>(null);
-  const toast = useToast();
 
   // Add state for assignee filter
   const [isAssigneeFilterActive, setIsAssigneeFilterActive] = useState(false);
@@ -437,131 +436,98 @@ export const CRMPage = () => {
     }
   };
 
-  const testEdgeFunction = async () => {
-    try {
-      const { data: response, error } = await supabase.functions.invoke('reverse-string', {
-        body: { text: 'Hello from CRM! This is a more complex test message.' }
-      });
-      
-      if (error) throw error;
-      if (!response) throw new Error('No response data received');
-      
-      console.log('Edge function response:', response);
-      toast({
-        title: 'Text Analysis Complete',
-        description: `
-          Words: ${response.stats.wordCount}
-          Unique: ${response.stats.uniqueWords}
-          Longest: "${response.stats.longestWord.word}" (${response.stats.longestWord.length} chars)
-          Processing: ${response.metadata.processingTimeMs}ms
-        `.replace(/\s+/g, ' '),
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
-    } catch (error) {
-      console.error('Edge function error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to call edge function',
-        status: 'error',
-        duration: 3000,
-        isClosable: true,
-      });
-    }
-  };
-
   return (
-    <Box h="100vh" p={4}>
-      <Grid
-        templateAreas={`
-          "list details"
-          "list messages"
-        `}
-        gridTemplateRows={'1fr 1fr'}
-        gridTemplateColumns={'350px 1fr'}
-        h="100%"
-        gap="4"
-      >
-        <GridItem area="list" borderWidth="1px" borderRadius="lg" borderColor={borderColor} p={4}>
-          <Flex mb={4} gap={2}>
-            <Button size="sm" colorScheme="blue" onClick={testEdgeFunction}>
-              Test Edge Function
-            </Button>
-            {userRole !== 'customer' && (
-              <IconButton
-                aria-label="Toggle assignee filter"
-                icon={<FiUser />}
-                size="sm"
-                colorScheme={isAssigneeFilterActive ? 'blue' : 'gray'}
-                onClick={handleAssigneeFilterToggle}
-              />
-            )}
-          </Flex>
-          <TicketList
-            tickets={tickets}
-            onSelectTicket={setSelectedTicketId}
-            selectedTicketId={selectedTicketId}
-            selectedTags={selectedTags}
-            onTagsChange={setSelectedTags}
-            isFilterEnabled={isFilterEnabled}
-            onFilterEnabledChange={handleFilterEnabledChange}
-            onMetadataFiltersChange={setMetadataFilters}
-          />
-        </GridItem>
-
-        <GridItem area="details" borderWidth="1px" borderRadius="lg" borderColor={borderColor} p={4}>
+    <Grid
+      templateColumns="300px 1fr 300px"
+      gap={4}
+      h="calc(100vh - 140px)"
+    >
+      {/* Left Sidebar - Ticket Details */}
+      <GridItem borderRight="1px" borderColor={borderColor} overflowY="auto">
+        <Box p={4}>
           <TicketDetails
             ticket={selectedTicket}
             onRefresh={handleRefresh}
           />
-        </GridItem>
+        </Box>
+      </GridItem>
 
-        <GridItem area="messages" position="relative">
-          <Box 
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            bottom={0}
-            display="flex"
-            flexDirection="column"
-          >
-            {selectedTicket && (
-              <>
-                <Box flex="1" overflowY="auto" p={4}>
-                  <MessageFeed 
-                    ref={messageFeedRef}
-                    ticketId={selectedTicket.id} 
+      {/* Main Content - Messages and Composer */}
+      <GridItem position="relative">
+        <Box 
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          display="flex"
+          flexDirection="column"
+        >
+          {selectedTicket && (
+            <>
+              {/* Scrollable Message Feed */}
+              <Box flex="1" overflowY="auto" p={4}>
+                <MessageFeed 
+                  ref={messageFeedRef}
+                  ticketId={selectedTicket.id} 
+                />
+              </Box>
+              
+              {/* Fixed Message Composer */}
+              <Box p={4} borderTop="1px" borderColor={borderColor}>
+                <Flex>
+                  <Input
+                    placeholder="Type a message..."
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
                   />
-                </Box>
-                
-                <Box p={4} borderTop="1px" borderColor={borderColor}>
-                  <Flex>
-                    <Input
-                      placeholder="Type a message..."
-                      value={messageInput}
-                      onChange={(e) => setMessageInput(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage();
-                        }
-                      }}
-                    />
-                    <IconButton
-                      aria-label="Send message"
-                      icon={<ArrowForwardIcon />}
-                      ml={2}
-                      onClick={handleSendMessage}
-                    />
-                  </Flex>
-                </Box>
-              </>
+                  <IconButton
+                    aria-label="Send message"
+                    icon={<ArrowForwardIcon />}
+                    ml={2}
+                    onClick={handleSendMessage}
+                  />
+                </Flex>
+              </Box>
+            </>
+          )}
+        </Box>
+      </GridItem>
+
+      {/* Right Sidebar - Ticket List */}
+      <GridItem borderLeft="1px" borderColor={borderColor} overflowY="auto">
+        <Box p={4} borderBottom="1px" borderColor={borderColor}>
+          <HStack spacing={4} mb={4}>
+            {userRole === 'agent' && (
+              <Button
+                size="sm"
+                colorScheme={isAssigneeFilterActive ? "blue" : "gray"}
+                variant={isAssigneeFilterActive ? "solid" : "outline"}
+                onClick={handleAssigneeFilterToggle}
+                leftIcon={<FiUser />}
+              >
+                My Tickets
+              </Button>
             )}
-          </Box>
-        </GridItem>
-      </Grid>
-    </Box>
+          </HStack>
+        </Box>
+        <TicketList
+          tickets={tickets}
+          onSelectTicket={setSelectedTicketId}
+          selectedTicketId={selectedTicketId}
+          selectedTags={selectedTags}
+          onTagsChange={setSelectedTags}
+          isFilterEnabled={isFilterEnabled}
+          onFilterEnabledChange={handleFilterEnabledChange}
+          onMetadataFiltersChange={setMetadataFilters}
+        />
+      </GridItem>
+    </Grid>
   );
 }; 
