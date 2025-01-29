@@ -37,6 +37,12 @@ resource "aws_amplify_app" "autocrm" {
   # Add GitHub webhook to trigger builds
 
   custom_rule {
+    source = "/index.html"
+    target = "/"
+    status = "301"
+  }
+
+  custom_rule {
     source = "/<*>"
     status = "404"
     target = "/index.html"
