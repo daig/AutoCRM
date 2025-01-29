@@ -25,6 +25,19 @@ resource "aws_amplify_app" "autocrm" {
   # Enable branch auto-build and deployment
   enable_branch_auto_build = true
 
+  # Rewrite all non-asset requests to index.html for client-side routing
+    custom_rule {
+    source = "/<*>"
+    target = "/<*>"
+    status = "200"
+  }
+
+  custom_rule {
+    source = "/<*>"
+    target = "/index.html"
+    status = "200"
+  }
+
   # Enable GitHub integration
   enable_auto_branch_creation = true
   enable_branch_auto_deletion = true
