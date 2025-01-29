@@ -32,6 +32,8 @@ resource "aws_amplify_app" "autocrm" {
     status = "200"
   }
 
+ 
+
   custom_rule {
     source = "/<*>"
     target = "/index.html"
