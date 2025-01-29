@@ -27,8 +27,8 @@ resource "aws_amplify_app" "autocrm" {
 
   # Rewrite all non-asset requests to index.html for client-side routing
     custom_rule {
-    source = "/<*>"
-    target = "/<*>"
+    source = "/assets/<*>"
+    target = "/assets/<*>"
     status = "200"
   }
 
