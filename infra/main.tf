@@ -31,7 +31,7 @@ resource "aws_amplify_app" "autocrm" {
     target = "/assets/<*>"
     status = "200"
   }
-
+//
  
 
   custom_rule {
