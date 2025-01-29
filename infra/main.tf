@@ -44,8 +44,14 @@ resource "aws_amplify_app" "autocrm" {
 
   custom_rule {
     source = "/<*>"
-    status = "404"
     target = "/index.html"
+    status = "200"
+  }
+
+  custom_rule {
+    source = "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>"
+    target = "/index.html"
+    status = "200"
   }
 
   environment_variables = {
