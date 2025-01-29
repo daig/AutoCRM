@@ -36,18 +36,7 @@ resource "aws_amplify_app" "autocrm" {
 
   # Add GitHub webhook to trigger builds
 
-  custom_rule {
-    source = "/index.html"
-    target = "/"
-    status = "301"
-  }
-
-  custom_rule {
-    source = "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|ttf|map|json)$)([^.]+$)/>"
-    target = "/index.html"
-    status = "200"
-  }
-
+  # Rewrite all non-asset requests to index.html for client-side routing
   custom_rule {
     source = "/<*>"
     target = "/index.html"
