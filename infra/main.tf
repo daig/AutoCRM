@@ -36,12 +36,6 @@ resource "aws_amplify_app" "autocrm" {
 
   # Add GitHub webhook to trigger builds
 
-  # Rewrite all non-asset requests to index.html for client-side routing
-  custom_rule {
-    source = "/<*>"
-    target = "/index.html"
-    status = "200"
-  }
 
   environment_variables = {
     VITE_SUPABASE_URL      = var.supabase_url
