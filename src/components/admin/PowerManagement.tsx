@@ -8,7 +8,6 @@ import {
   VStack,
   Text,
   useToast,
-  Spinner,
 } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
 
