@@ -12,6 +12,7 @@ import { MetadataFieldManagement } from '../components/admin/MetadataFieldManage
 import { TeamManagement } from '../components/admin/TeamManagement';
 import { UserManagement } from '../components/admin/UserManagement';
 import { TicketManagement } from '../components/admin/TicketManagement';
+import { PowerManagement } from '../components/admin/PowerManagement';
 
 const AdminPage: React.FC = () => {
   const userManagementRef = useRef<{ refreshUsers: () => void } | null>(null);
@@ -34,6 +35,7 @@ const AdminPage: React.FC = () => {
           <Tab>Tickets</Tab>
           <Tab>Tags</Tab>
           <Tab>Metadata Fields</Tab>
+          <Tab>AI Power Tools</Tab>
         </TabList>
 
         <TabPanels>
@@ -54,6 +56,9 @@ const AdminPage: React.FC = () => {
           </TabPanel>
           <TabPanel>
             <MetadataFieldManagement />
+          </TabPanel>
+          <TabPanel>
+            <PowerManagement />
           </TabPanel>
         </TabPanels>
       </Tabs>

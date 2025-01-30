@@ -1,0 +1,8 @@
+{
+  "imports": {
+    "@std/http/server": "jsr:@std/http@^0.218.2/server",
+    "@langchain/openai": "npm:@langchain/openai@0.3.0",
+    "@langchain/core/prompts": "npm:@langchain/core@0.3.1/prompts",
+    "@langchain/core/runnables": "npm:@langchain/core@0.3.1/runnables"
+  }
+}

@@ -1,5 +1,0 @@
-{
-  "imports": {
-    "@std/http/server": "jsr:@std/http@^0.218.2/server"
-  }
-}
