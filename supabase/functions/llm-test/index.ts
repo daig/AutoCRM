@@ -13,10 +13,10 @@ import {
   createErrorResponse 
 } from "../_shared/cors.ts"
 
-// Import LangChain and OpenAI
+// Import LangChain and LangGraph
 import { ChatOpenAI } from "@langchain/openai"
 import { ChatPromptTemplate } from "@langchain/core/prompts"
-import { RunnableSequence } from "@langchain/core/runnables"
+import { task, entrypoint, MemorySaver } from "@langchain/langgraph"
 
 // Add Deno types
 declare global {
@@ -43,6 +43,43 @@ interface AIResponse {
   };
 }
 
+// Create a task for AI processing
+const processWithAI = task("process_with_ai", async (input: string) => {
+  const model = new ChatOpenAI({
+    openAIApiKey: Deno.env.get("OPENAI_API_KEY"),
+    temperature: 0.7,
+  });
+
+  const prompt = ChatPromptTemplate.fromTemplate(`
+    You are a helpful AI assistant. Please analyze and respond to the following text:
+    
+    Text: {input}
+    
+    Provide a thoughtful and detailed response that includes:
+    1. A summary of the main points
+    2. Key insights or observations
+    3. Potential implications or recommendations
+  `);
+
+  const result = await prompt.pipe(model).invoke({
+    input,
+  });
+
+  return result.content;
+});
+
+// Create the main workflow entrypoint
+const aiWorkflow = entrypoint(
+  { 
+    checkpointer: new MemorySaver(), 
+    name: "ai_workflow" 
+  },
+  async (input: { text: string }) => {
+    const result = await processWithAI(input.text);
+    return result;
+  }
+);
+
 serve(async (req) => {
   // Handle CORS preflight requests
   const corsResponse = handleCorsPreflightRequest(req);
@@ -56,38 +93,18 @@ serve(async (req) => {
       return createErrorResponse('Please provide a text string in the request body');
     }
 
-    // Initialize the OpenAI model
-    const model = new ChatOpenAI({
-      openAIApiKey: Deno.env.get("OPENAI_API_KEY"),
-      temperature: 0.7,
-    });
+    // Use the workflow with a unique thread ID
+    const config = {
+      configurable: {
+        thread_id: crypto.randomUUID(),
+      },
+    };
 
-    // Create a prompt template
-    const prompt = ChatPromptTemplate.fromTemplate(`
-      You are a helpful AI assistant. Please analyze and respond to the following text:
-      
-      Text: {input}
-      
-      Provide a thoughtful and detailed response that includes:
-      1. A summary of the main points
-      2. Key insights or observations
-      3. Potential implications or recommendations
-    `);
-
-    // Create a chain
-    const chain = RunnableSequence.from([
-      prompt,
-      model,
-    ]);
-
-    // Run the chain
-    const result = await chain.invoke({
-      input: text,
-    });
+    const result = await aiWorkflow.invoke({ text }, config);
 
     const response: AIResponse = {
       input: text,
-      output: result.content,
+      output: result,
       metadata: {
         processedAt: new Date().toISOString(),
         processingTimeMs: Math.round(performance.now() - startTime)
