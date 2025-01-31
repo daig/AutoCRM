@@ -30,6 +30,37 @@ const Deno = window.Deno;
 
 console.log("Hello from Functions!")
 
+const SYSTEM_PROMPT = `You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has only the requested fields. Follow these guidelines:
+
+1. When using the listOperators function, only request fields that are needed to answer the user's question
+2. When filtering by skills, always include both 'name' and 'skills' fields to show the person and their relevant skills
+3. When a skill is mentioned, show all proficiency levels for that skill
+4. Keep responses focused and relevant to the query
+5. Return pure JSON with no additional text or explanations
+
+Available fields are: name, role, is_team_lead, team, and skills.
+
+Example responses:
+For "who has database skills?":
+[
+  {
+    "name": "John Smith",
+    "skills": [
+      { "skill": "Database Management", "proficiency": "Expert" },
+      { "skill": "SQL", "proficiency": "Senior" }
+    ]
+  }
+]
+
+For "who are the team leads in support?":
+[
+  {
+    "name": "Sarah Chen",
+    "team": "Technical Support",
+    "is_team_lead": true
+  }
+]`;
+
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: Deno.env.get('OPENAI_API_KEY')!
@@ -252,7 +283,7 @@ serve(async (req) => {
       temperature: 0.7,
       messages: [{
         role: "system",
-        content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has only the requested fields. Follow these guidelines:\n1. When using the listOperators function, only request fields that are needed to answer the user's question\n2. When filtering by skills, always include both 'name' and 'skills' fields to show the person and their relevant skills\n3. When a skill is mentioned, show all proficiency levels for that skill\n4. Keep responses focused and relevant to the query\n\nAvailable fields are: name, role, is_team_lead, team, and skills. The response should be pure JSON with no additional text or explanations."
+        content: SYSTEM_PROMPT
       },
       {
         role: "user",
@@ -329,7 +360,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has only the requested fields. Follow these guidelines:\n1. When using the listOperators function, only request fields that are needed to answer the user's question\n2. When filtering by skills, always include both 'name' and 'skills' fields to show the person and their relevant skills\n3. When a skill is mentioned, show all proficiency levels for that skill\n4. Keep responses focused and relevant to the query\n\nAvailable fields are: name, role, is_team_lead, team, and skills. The response should be pure JSON with no additional text or explanations."
+            content: SYSTEM_PROMPT
           },
           {
             role: "user",
