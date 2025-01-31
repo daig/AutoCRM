@@ -26,10 +26,14 @@ import {
   useColorModeValue,
   Tooltip,
   SlideFade,
+  Collapse,
+  Code,
 } from '@chakra-ui/react';
 import { 
-  CloseIcon, 
-  ArrowRightIcon
+  CloseIcon,
+  ArrowRightIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
 } from '@chakra-ui/icons';
 import { FiZap } from 'react-icons/fi';
 import { supabase } from '../../config/supabase';
@@ -100,6 +104,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
   const toast = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReassigning, setIsReassigning] = useState(false);
+  const [isTraceVisible, setIsTraceVisible] = useState(false);
 
   const bgColor = useColorModeValue('white', 'gray.800');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -646,6 +651,54 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
                 <Box mt={4} fontSize="sm" color="gray.600">
                   <Text>Processed at: {new Date(response.metadata.processedAt).toLocaleString()}</Text>
                   <Text>Processing time: {response.metadata.processingTimeMs}ms</Text>
+                  
+                  {/* Trace Section */}
+                  <Box mt={4}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsTraceVisible(!isTraceVisible)}
+                      rightIcon={isTraceVisible ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                      mb={2}
+                    >
+                      {isTraceVisible ? 'Hide Trace' : 'Show Trace'}
+                    </Button>
+                    
+                    <Collapse in={isTraceVisible}>
+                      <Box
+                        p={4}
+                        bg={useColorModeValue('gray.50', 'gray.700')}
+                        borderRadius="md"
+                        borderWidth="1px"
+                        borderColor={useColorModeValue('gray.200', 'gray.600')}
+                        overflowX="auto"
+                      >
+                        {response.trace.map((item, index) => (
+                          <Box key={index} mb={4}>
+                            <Text fontWeight="bold" color={useColorModeValue('gray.700', 'gray.300')}>
+                              {item.type} {item.name ? `(${item.name})` : ''}
+                            </Text>
+                            {item.arguments && (
+                              <Box mt={2}>
+                                <Text fontWeight="medium" color={useColorModeValue('gray.600', 'gray.400')}>Arguments:</Text>
+                                <Code p={2} display="block" whiteSpace="pre" borderRadius="md" mt={1}>
+                                  {JSON.stringify(item.arguments, null, 2)}
+                                </Code>
+                              </Box>
+                            )}
+                            {item.result && (
+                              <Box mt={2}>
+                                <Text fontWeight="medium" color={useColorModeValue('gray.600', 'gray.400')}>Result:</Text>
+                                <Code p={2} display="block" whiteSpace="pre" borderRadius="md" mt={1}>
+                                  {typeof item.result === 'string' ? item.result : JSON.stringify(item.result, null, 2)}
+                                </Code>
+                              </Box>
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+                    </Collapse>
+                  </Box>
                 </Box>
               </Box>
             )}
