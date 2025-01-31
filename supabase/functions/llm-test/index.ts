@@ -51,10 +51,25 @@ interface AIResponse {
   }[];
 }
 
-// Function to list team members
-async function listTeamMembers(
-  teamName: string, 
+// Function to get all available team names
+async function getAvailableTeams(authToken: string): Promise<string[]> {
+  const supabase = createSupabaseClient(authToken);
+  const { data: teams, error } = await supabase
+    .from('teams')
+    .select('name')
+    .order('name');
+
+  if (error) {
+    throw new Error(`Failed to get teams: ${error.message}`);
+  }
+
+  return teams.map(team => team.name);
+}
+
+// Function to list operators
+async function listOperators(
   authToken: string,
+  teamName?: string,
   skillFilter?: string,
   proficiencyFilter?: string
 ): Promise<string> {
@@ -67,7 +82,7 @@ async function listTeamMembers(
       full_name,
       role,
       is_team_lead,
-      team:teams!inner (
+      team:teams!left (
         name
       ),
       skills:agent_skills!left (
@@ -78,14 +93,18 @@ async function listTeamMembers(
           )
         )
       )
-    `)
-    .eq('teams.name', teamName);
+    `);
+
+  // Only filter by team if provided
+  if (teamName) {
+    query = query.eq('teams.name', teamName);
+  }
 
   // Get the results
   const { data: users, error } = await query;
 
   if (error) {
-    throw new Error(`Failed to get team members: ${error.message}`);
+    throw new Error(`Failed to get operators: ${error.message}`);
   }
 
   // Filter users based on skills and proficiency in memory
@@ -106,6 +125,7 @@ async function listTeamMembers(
     full_name: user.full_name,
     role: user.role,
     is_team_lead: user.is_team_lead,
+    team: user.team?.name,
     skills: user.skills?.map(skill => ({
       skill: skill.proficiency.skill.name,
       proficiency: skill.proficiency.name
@@ -168,16 +188,17 @@ serve(async (req) => {
       return createErrorResponse(error.message, 401);
     }
 
-    // Fetch available skills and proficiencies
-    const [availableSkills, availableProficiencies] = await Promise.all([
+    // Fetch available options
+    const [availableSkills, availableProficiencies, availableTeams] = await Promise.all([
       getAvailableSkills(authToken),
-      getAvailableProficiencies(authToken)
+      getAvailableProficiencies(authToken),
+      getAvailableTeams(authToken)
     ]);
 
     trace.push({
       type: 'metadata',
       name: 'available_options',
-      result: { skills: availableSkills, proficiencies: availableProficiencies }
+      result: { skills: availableSkills, proficiencies: availableProficiencies, teams: availableTeams }
     });
 
     // Call OpenAI with function definition
@@ -189,27 +210,27 @@ serve(async (req) => {
         content: text
       }],
       functions: [{
-        name: "listTeamMembers",
-        description: "Get a list of all users in a specified team, optionally filtered by skills and/or proficiency levels",
+        name: "listOperators",
+        description: "Get a list of all operators (users), optionally filtered by team, skills, and/or proficiency levels",
         parameters: {
           type: "object",
           properties: {
             teamName: {
               type: "string",
-              description: "The name of the team to query"
+              description: "Optional. The name of the team to filter by",
+              enum: availableTeams
             },
             skillFilter: {
               type: "string",
-              description: "Filter team members by skill name",
+              description: "Filter operators by skill name",
               enum: availableSkills
             },
             proficiencyFilter: {
               type: "string",
-              description: "Filter team members by proficiency level",
+              description: "Filter operators by proficiency level",
               enum: availableProficiencies
             }
-          },
-          required: ["teamName"]
+          }
         }
       }],
       function_call: "auto"
@@ -231,16 +252,16 @@ serve(async (req) => {
       
       trace.push({
         type: 'function_call',
-        name: 'listTeamMembers',
+        name: 'listOperators',
         arguments: { teamName, skillFilter, proficiencyFilter }
       });
 
       // Call the function
-      const functionResult = await listTeamMembers(teamName, authToken, skillFilter, proficiencyFilter);
+      const functionResult = await listOperators(authToken, teamName, skillFilter, proficiencyFilter);
 
       trace.push({
         type: 'function_result',
-        name: 'listTeamMembers',
+        name: 'listOperators',
         result: functionResult
       });
 
@@ -256,7 +277,7 @@ serve(async (req) => {
           responseMessage,
           {
             role: "function",
-            name: "listTeamMembers",
+            name: "listOperators",
             content: functionResult
           }
         ]
