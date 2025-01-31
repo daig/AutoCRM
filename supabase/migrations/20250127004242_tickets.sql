@@ -28,7 +28,7 @@ create table tickets (
     title         text not null,
     description   text,
     team          uuid not null default get_triage_team_id() references teams(id) on delete set default,
-    creator       uuid not null default auth.uid() references users(id),
+    creator       uuid not null default auth.uid() references users(id) on delete cascade,
     created_at    timestamp with time zone default now(),
     updated_at    timestamp with time zone default now()
 );

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import {
   Box,
   Button,
@@ -15,6 +15,14 @@ import {
   Th,
   Td,
   Badge,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  useDisclosure,
 } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
 
@@ -27,6 +35,7 @@ interface Person {
     skill: string;
     proficiency: string;
   }>;
+  delete?: boolean;
 }
 
 interface AIResponse {
@@ -65,11 +74,18 @@ const tableStyles = {
   },
 };
 
-export const PowerManagement: React.FC = () => {
+interface PowerManagementProps {
+  onUsersChange?: () => void;
+}
+
+export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange }) => {
   const [inputText, setInputText] = useState('');
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedPeople, setSelectedPeople] = useState<Person[]>([]);
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSubmit = async () => {
     if (!inputText.trim()) {
@@ -108,6 +124,58 @@ export const PowerManagement: React.FC = () => {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!selectedPeople.length) return;
+
+    setIsDeleting(true);
+    try {
+      // Get all user names to delete
+      const userNames = selectedPeople.map(person => person.name);
+
+      // Delete the users
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .in('full_name', userNames);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Users deleted successfully',
+        description: `Deleted ${selectedPeople.length} users`,
+        status: 'success',
+        duration: 5000,
+      });
+
+      // Clear the response and input after successful deletion
+      setResponse(null);
+      setInputText('');
+      setSelectedPeople([]);
+      onClose();
+
+      // Trigger refresh of UserManagement component
+      onUsersChange?.();
+    } catch (error) {
+      console.error('Error deleting users:', error);
+      toast({
+        title: 'Error deleting users',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        status: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    // Clear all relevant state
+    setSelectedPeople([]);
+    setResponse(null);
+    setInputText('');
+    onClose();
+  };
+
   const renderSkills = (skills?: Person['skills']) => {
     if (!skills?.length) return null;
     return skills.map((skill, index) => (
@@ -125,8 +193,19 @@ export const PowerManagement: React.FC = () => {
 
   const renderResponse = (output: string) => {
     try {
-      // Since output is already a stringified JSON, parse it
       const people: Person[] = JSON.parse(output);
+      
+      // Check if this is a delete operation
+      const isDeleteOperation = people.some(p => p.delete);
+      
+      // Update selected people for delete modal, but don't immediately open it
+      // This ensures we don't trigger a re-render during the current render
+      if (isDeleteOperation) {
+        setTimeout(() => {
+          setSelectedPeople(people);
+          onOpen();
+        }, 0);
+      }
       
       // Get all available fields from the response
       const hasName = people.some(p => 'name' in p);
@@ -136,36 +215,139 @@ export const PowerManagement: React.FC = () => {
       const hasSkills = people.some(p => 'skills' in p);
 
       return (
-        <Table className="response-table" sx={tableStyles['.response-table']}>
-          <Thead>
-            <Tr>
-              {hasName && <Th>Name</Th>}
-              {hasRole && <Th>Role</Th>}
-              {hasTeamLead && <Th>Team Lead</Th>}
-              {hasTeam && <Th>Team</Th>}
-              {hasSkills && <Th>Skills</Th>}
-            </Tr>
-          </Thead>
-          <Tbody>
-            {people.map((person, index) => (
-              <Tr key={index}>
-                {hasName && <Td fontWeight="medium">{person.name}</Td>}
-                {hasRole && <Td>{person.role}</Td>}
-                {hasTeamLead && (
-                  <Td>
-                    {person.is_team_lead ? (
-                      <Badge colorScheme="green">Yes</Badge>
-                    ) : (
-                      <Badge colorScheme="gray">No</Badge>
+        <>
+          <Box position="relative">
+            {isDeleteOperation && (
+              <Box 
+                position="absolute" 
+                top={0} 
+                right={0} 
+                mb={4}
+              >
+                <Badge colorScheme="red" fontSize="md" p={2}>
+                  Delete Operation Pending
+                </Badge>
+              </Box>
+            )}
+            
+            <Table className="response-table" sx={tableStyles['.response-table']}>
+              <Thead>
+                <Tr>
+                  {hasName && <Th>Name</Th>}
+                  {hasRole && <Th>Role</Th>}
+                  {hasTeamLead && <Th>Team Lead</Th>}
+                  {hasTeam && <Th>Team</Th>}
+                  {hasSkills && <Th>Skills</Th>}
+                </Tr>
+              </Thead>
+              <Tbody>
+                {people.map((person, index) => (
+                  <Tr 
+                    key={index}
+                    bg={isDeleteOperation ? 'red.50' : undefined}
+                  >
+                    {hasName && <Td fontWeight="medium">{person.name}</Td>}
+                    {hasRole && <Td>{person.role}</Td>}
+                    {hasTeamLead && (
+                      <Td>
+                        {person.is_team_lead ? (
+                          <Badge colorScheme="green">Yes</Badge>
+                        ) : (
+                          <Badge colorScheme="gray">No</Badge>
+                        )}
+                      </Td>
                     )}
-                  </Td>
-                )}
-                {hasTeam && <Td>{person.team}</Td>}
-                {hasSkills && <Td>{renderSkills(person.skills)}</Td>}
-              </Tr>
-            ))}
-          </Tbody>
-        </Table>
+                    {hasTeam && <Td>{person.team}</Td>}
+                    {hasSkills && <Td>{renderSkills(person.skills)}</Td>}
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          </Box>
+
+          {/* Delete Confirmation Modal */}
+          <Modal 
+            isOpen={isOpen} 
+            onClose={handleCancel}
+            closeOnOverlayClick={!isDeleting}
+            closeOnEsc={!isDeleting}
+            size="xl"
+          >
+            <ModalOverlay />
+            <ModalContent>
+              <ModalHeader color="red.500">Confirm Delete Operation</ModalHeader>
+              <ModalCloseButton isDisabled={isDeleting} />
+              <ModalBody>
+                <VStack align="stretch" spacing={4}>
+                  <Text fontSize="lg" fontWeight="medium">
+                    Are you sure you want to delete the following {selectedPeople.length} users?
+                  </Text>
+                  <Box 
+                    p={4} 
+                    bg="red.50" 
+                    borderRadius="md" 
+                    borderLeft="4px" 
+                    borderColor="red.500"
+                  >
+                    <Text color="red.700" fontWeight="medium" mb={2}>
+                      Warning: This is a destructive operation that will also delete:
+                    </Text>
+                    <VStack align="stretch" spacing={1} pl={4} color="red.700">
+                      <Text>• All tickets created by these users</Text>
+                      <Text>• All messages sent by these users in any ticket</Text>
+                      <Text>• All ticket metadata referencing these users</Text>
+                      <Text>• All user skills and team associations</Text>
+                    </VStack>
+                    <Text color="red.700" mt={2} fontWeight="medium">
+                      This action cannot be undone.
+                    </Text>
+                  </Box>
+                  <Box 
+                    maxH="300px" 
+                    overflowY="auto" 
+                    borderWidth={1} 
+                    borderRadius="md" 
+                    p={4}
+                  >
+                    {selectedPeople.map((person, index) => (
+                      <Text key={index} py={1}>
+                        • <Text as="span" fontWeight="medium">{person.name}</Text>
+                        {person.team && (
+                          <Text as="span" color="gray.600">
+                            {' '}({person.team})
+                          </Text>
+                        )}
+                        {person.role && (
+                          <Text as="span" color="gray.600">
+                            {' '}- {person.role}
+                          </Text>
+                        )}
+                      </Text>
+                    ))}
+                  </Box>
+                </VStack>
+              </ModalBody>
+              <ModalFooter>
+                <Button 
+                  colorScheme="gray" 
+                  mr={3} 
+                  onClick={handleCancel}
+                  isDisabled={isDeleting}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  colorScheme="red" 
+                  onClick={handleConfirmDelete}
+                  isLoading={isDeleting}
+                  loadingText="Deleting..."
+                >
+                  I understand, delete these users
+                </Button>
+              </ModalFooter>
+            </ModalContent>
+          </Modal>
+        </>
       );
     } catch (error) {
       // If parsing fails or output is not valid JSON, display raw output

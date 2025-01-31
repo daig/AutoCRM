@@ -26,6 +26,10 @@ const AdminPage: React.FC = () => {
     ticketManagementRef.current?.handleTeamsChange();
   };
 
+  const handleUsersChange = () => {
+    userManagementRef.current?.refreshUsers();
+  };
+
   return (
     <Box p={6}>
       <Tabs>
@@ -58,7 +62,7 @@ const AdminPage: React.FC = () => {
             <MetadataFieldManagement />
           </TabPanel>
           <TabPanel>
-            <PowerManagement />
+            <PowerManagement onUsersChange={handleUsersChange} />
           </TabPanel>
         </TabPanels>
       </Tabs>

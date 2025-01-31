@@ -30,11 +30,18 @@ const Deno = window.Deno;
 
 console.log("Hello from Functions!")
 
-const SYSTEM_PROMPT = `You are a "AI Power Tool" that helps find and filter people based on their teams, roles, and skills. When using the listOperators function:
+const SYSTEM_PROMPT = `You are a "AI Power Tool" that helps find and filter people based on their teams, roles, and skills.
 
-1. Only request fields that are needed to answer the user's question
-2. When filtering by skills, always include the proficiency level
-3. When filtering by team lead status, always include the team name`;
+IMPORTANT: You must ALWAYS use the provided tools directly. DO NOT write code examples or explain how to use the tools.
+- For queries about users → use listOperators
+- For deletion requests → use deleteOperators
+
+When using the tools:
+1. For queries, you MUST specify which fields to return based on the user's question. Only list the name by default.
+2. When filtering by skills, always include the proficiency level and request the 'skills' field
+3. When filtering by team lead status, always include the team name and request the 'team' field
+4. When filtering by team, you MUST use the exact team name from the available options.
+5. For delete operations, always include the 'name' field and any fields needed to confirm the correct users are being deleted.`;
 
 
 // Initialize OpenAI client
@@ -110,11 +117,12 @@ async function getAvailableOptions(authToken: string): Promise<AvailableOptions>
 // Function to list operators
 async function listOperators(
   authToken: string,
+  fields: string[],
   teamName?: string,
   skillFilter?: string,
   proficiencyFilter?: string,
-  fields?: string[],
-  isTeamLead?: boolean
+  isTeamLead?: boolean,
+  isDelete: boolean = false
 ): Promise<string> {
   const supabase = createSupabaseClient(authToken);
 
@@ -123,26 +131,27 @@ async function listOperators(
     name: 'full_name',
     role: 'role',
     is_team_lead: 'is_team_lead',
-    team: 'team:teams (name)',
+    team: 'team:teams!inner (name)',
     skills: 'skills:agent_skills (proficiency:proficiencies!inner (name, skill:skills!inner (name)))'
   };
 
   // Build the select statement based on requested fields
-  const selectFields = fields && fields.length > 0
-    ? fields.map(field => fieldMappings[field] || field).join(',\n')
-    : Object.values(fieldMappings).join(',\n');
+  let selectFields = fields.map(field => fieldMappings[field] || field);
+
+  // If we're filtering by team, ensure team is included in the select
+  if (teamName && !selectFields.includes(fieldMappings.team)) {
+    selectFields = [...selectFields, fieldMappings.team];
+  }
 
   // Start with the base user fields
   let query = supabase
     .from('users')
-    .select(selectFields);
+    .select(selectFields.join(',\n'));
 
   // Build the filter conditions
   if (teamName) {
-    // Inner join with teams when filtering by team
-    query = query
-      .eq('teams.name', teamName)
-      .not('team', 'is', null);
+    // Filter by team name
+    query = query.eq('team.name', teamName);
   }
 
   // Add team lead filter if specified
@@ -190,6 +199,11 @@ async function listOperators(
         skill: skill.proficiency.skill.name,
         proficiency: skill.proficiency.name
       })) || [];
+    }
+
+    // Add delete flag if this is a delete operation
+    if (isDelete) {
+      result.delete = true;
     }
     
     return result;
@@ -272,48 +286,95 @@ serve(async (req) => {
         role: "user",
         content: text
       }],
-      functions: [{
-        name: "listOperators",
-        description: "Get a list of all operators (users), optionally filtered by team, skills, proficiency levels, and team lead status",
-        parameters: {
-          type: "object",
-          properties: {
-            description: {
-              type: "string",
-              description: "A concise description suitable for a table header (e.g. 'Team Leads in Technical Support', 'Operators with Database Skills')"
-            },
-            teamName: {
-              type: "string",
-              description: "The name of the team to filter by",
-              enum: availableOptions.teams
-            },
-            skillFilter: {
-              type: "string",
-              description: "Filter operators by skill name",
-              enum: availableOptions.skills
-            },
-            proficiencyFilter: {
-              type: "string",
-              description: "Filter operators by proficiency level",
-              enum: availableOptions.proficiencies
-            },
-            isTeamLead: {
-              type: "boolean",
-              description: "Filter to show only team leads (true) or non-team leads (false)"
-            },
-            fields: {
-              type: "array",
-              description: "List of fields to return for each operator. If not specified, returns all fields.",
-              items: {
+      tools: [{
+        type: "function",
+        function: {
+          name: "listOperators",
+          description: "Get a list of all operators (users), optionally filtered by team, skills, proficiency levels, and team lead status",
+          parameters: {
+            type: "object",
+            properties: {
+              description: {
                 type: "string",
-                enum: ["name", "role", "is_team_lead", "team", "skills"]
+                description: "A concise description suitable for a table header (e.g. 'Team Leads in Technical Support', 'Operators with Database Skills')"
+              },
+              fields: {
+                type: "array",
+                description: "List of fields to return for each operator. Only request fields needed for the query.",
+                items: {
+                  type: "string",
+                  enum: ["name", "role", "is_team_lead", "team", "skills"]
+                }
+              },
+              teamName: {
+                type: "string",
+                description: "The name of the team to filter by",
+                enum: availableOptions.teams
+              },
+              skillFilter: {
+                type: "string",
+                description: "Filter operators by skill name",
+                enum: availableOptions.skills
+              },
+              proficiencyFilter: {
+                type: "string",
+                description: "Filter operators by proficiency level",
+                enum: availableOptions.proficiencies
+              },
+              isTeamLead: {
+                type: "boolean",
+                description: "Filter to show only team leads (true) or non-team leads (false)"
               }
-            }
-          },
-          required: ["description"]
+            },
+            required: ["description", "fields"]
+          }
+        }
+      },
+      {
+        type: "function",
+        function: {
+          name: "deleteOperators",
+          description: "Delete a list of operators (users) based on filters.",
+          parameters: {
+            type: "object",
+            properties: {
+              description: {
+                type: "string",
+                description: "A concise description of what will be deleted (e.g. 'Delete all inactive team leads', 'Remove operators from Technical Support')"
+              },
+              fields: {
+                type: "array",
+                description: "List of fields to return for each operator to be deleted. Must include enough information to identify the users.",
+                items: {
+                  type: "string",
+                  enum: ["name", "role", "is_team_lead", "team", "skills"]
+                }
+              },
+              teamName: {
+                type: "string",
+                description: "The name of the team to filter by",
+                enum: availableOptions.teams
+              },
+              skillFilter: {
+                type: "string",
+                description: "Filter operators by skill name",
+                enum: availableOptions.skills
+              },
+              proficiencyFilter: {
+                type: "string",
+                description: "Filter operators by proficiency level",
+                enum: availableOptions.proficiencies
+              },
+              isTeamLead: {
+                type: "boolean",
+                description: "Filter to show only team leads (true) or non-team leads (false)"
+              }
+            },
+            required: ["description", "fields"]
+          }
         }
       }],
-      function_call: "auto"
+      tool_choice: "required"  // Allow the model to choose any tool, but require a tool call
     });
 
     trace.push({
@@ -326,22 +387,25 @@ serve(async (req) => {
     let result: string;
 
     // Check if the model wants to call a function
-    if (responseMessage.function_call) {
+    if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      const toolCall = responseMessage.tool_calls[0];
       // Parse the function arguments
-      const { teamName, skillFilter, proficiencyFilter, fields, isTeamLead, description } = JSON.parse(responseMessage.function_call.arguments);
+      const { fields, teamName, skillFilter, proficiencyFilter, isTeamLead, description } = JSON.parse(toolCall.function.arguments);
+      
+      const isDelete = toolCall.function.name === 'deleteOperators';
       
       trace.push({
         type: 'function_call',
-        name: 'listOperators',
-        arguments: { teamName, skillFilter, proficiencyFilter, fields, isTeamLead, description }
+        name: toolCall.function.name,
+        arguments: { fields, teamName, skillFilter, proficiencyFilter, isTeamLead, description }
       });
 
       // Call the function
-      const functionResult = await listOperators(authToken, teamName, skillFilter, proficiencyFilter, fields, isTeamLead);
+      const functionResult = await listOperators(authToken, fields, teamName, skillFilter, proficiencyFilter, isTeamLead, isDelete);
 
       trace.push({
         type: 'function_result',
-        name: 'listOperators',
+        name: toolCall.function.name,
         result: functionResult
       });
 

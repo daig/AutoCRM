@@ -3,7 +3,7 @@
 create table ticket_messages (
     id           uuid default uuid_generate_v4() primary key,
     ticket    uuid not null references tickets (id) on delete cascade,
-    sender    uuid references users (id),
+    sender    uuid references users (id) on delete cascade,
     content      text not null,
     created_at   timestamp with time zone default now()
 ); 
