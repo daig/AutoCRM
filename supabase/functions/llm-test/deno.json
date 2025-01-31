@@ -2,12 +2,8 @@
   "imports": {
     "jsr:": "https://jsr.io/",
     "@std/http/server": "https://deno.land/std@0.208.0/http/server.ts",
-    "@langchain/openai": "npm:@langchain/openai@0.0.14",
-    "@langchain/core/prompts": "npm:@langchain/core@0.1.48/prompts",
-    "@langchain/core/messages": "npm:@langchain/core@0.1.48/messages",
-    "@langchain/core/runnables": "npm:@langchain/core@0.1.48/runnables",
-    "@langchain/langgraph": "npm:@langchain/langgraph@0.2.41",
-    "@langchain/core/tools": "npm:@langchain/core@0.1.48/tools"
+    "@supabase/supabase-js": "npm:@supabase/supabase-js",
+    "openai": "npm:openai@4.28.0"
   },
   "tasks": {
     "start": "deno run --allow-net --allow-env --allow-read index.ts"
