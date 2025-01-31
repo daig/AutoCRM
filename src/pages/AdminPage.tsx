@@ -31,42 +31,43 @@ const AdminPage: React.FC = () => {
   };
 
   return (
-    <Box p={6}>
-      <Tabs>
-        <TabList>
-          <Tab>Users</Tab>
-          <Tab>Teams</Tab>
-          <Tab>Tickets</Tab>
-          <Tab>Tags</Tab>
-          <Tab>Metadata Fields</Tab>
-          <Tab>AI Power Tools</Tab>
-        </TabList>
+    <>
+      <Box p={6}>
+        <Tabs>
+          <TabList>
+            <Tab>Users</Tab>
+            <Tab>Teams</Tab>
+            <Tab>Tickets</Tab>
+            <Tab>Tags</Tab>
+            <Tab>Metadata Fields</Tab>
+          </TabList>
 
-        <TabPanels>
-          <TabPanel>
-            <UserManagement ref={userManagementRef} />
-          </TabPanel>
-          <TabPanel>
-            <TeamManagement 
-              onTeamMembershipChange={handleTeamMembershipChange}
-              onTeamsChange={handleTeamsChange}
-            />
-          </TabPanel>
-          <TabPanel>
-            <TicketManagement ref={ticketManagementRef} />
-          </TabPanel>
-          <TabPanel>
-            <TagManagement />
-          </TabPanel>
-          <TabPanel>
-            <MetadataFieldManagement />
-          </TabPanel>
-          <TabPanel>
-            <PowerManagement onUsersChange={handleUsersChange} />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </Box>
+          <TabPanels>
+            <TabPanel>
+              <UserManagement ref={userManagementRef} />
+            </TabPanel>
+            <TabPanel>
+              <TeamManagement 
+                onTeamMembershipChange={handleTeamMembershipChange}
+                onTeamsChange={handleTeamsChange}
+              />
+            </TabPanel>
+            <TabPanel>
+              <TicketManagement ref={ticketManagementRef} />
+            </TabPanel>
+            <TabPanel>
+              <TagManagement />
+            </TabPanel>
+            <TabPanel>
+              <MetadataFieldManagement />
+            </TabPanel>
+          </TabPanels>
+        </Tabs>
+      </Box>
+
+      {/* AI Power Tools Chat Box - Always visible */}
+      <PowerManagement onUsersChange={handleUsersChange} />
+    </>
   );
 };
 

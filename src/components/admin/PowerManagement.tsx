@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, KeyboardEvent } from 'react';
 import {
   Box,
   Button,
   FormControl,
-  FormLabel,
   Textarea,
   VStack,
   Text,
@@ -23,7 +22,16 @@ import {
   ModalBody,
   ModalCloseButton,
   useDisclosure,
+  IconButton,
+  useColorModeValue,
+  Tooltip,
+  SlideFade,
 } from '@chakra-ui/react';
+import { 
+  CloseIcon, 
+  ArrowRightIcon
+} from '@chakra-ui/icons';
+import { FiZap } from 'react-icons/fi';
 import { supabase } from '../../config/supabase';
 
 interface Person {
@@ -86,10 +94,15 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
   const [response, setResponse] = useState<AIResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedPeople, setSelectedPeople] = useState<Person[]>([]);
-  const { isOpen, onOpen, onClose } = useDisclosure();
+  const { isOpen: isModalOpen, onOpen: onModalOpen, onClose: onModalClose } = useDisclosure();
+  const { isOpen: isChatOpen, onToggle: onChatToggle } = useDisclosure();
+  const { isOpen: isActionModalOpen, onOpen: onActionModalOpen, onClose: onActionModalClose } = useDisclosure();
   const toast = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isReassigning, setIsReassigning] = useState(false);
+
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   const handleSubmit = async () => {
     if (!inputText.trim()) {
@@ -110,6 +123,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
       if (functionError) throw functionError;
 
       setResponse(functionData);
+      onModalOpen(); // Open the modal with results
       toast({
         title: 'Response received',
         status: 'success',
@@ -155,7 +169,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
       setResponse(null);
       setInputText('');
       setSelectedPeople([]);
-      onClose();
+      onModalClose();
 
       // Trigger refresh of UserManagement component
       onUsersChange?.();
@@ -212,7 +226,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
       setResponse(null);
       setInputText('');
       setSelectedPeople([]);
-      onClose();
+      onModalClose();
 
       // Trigger refresh of UserManagement component if provided
       onUsersChange?.();
@@ -234,7 +248,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
     setSelectedPeople([]);
     setResponse(null);
     setInputText('');
-    onClose();
+    onActionModalClose();
   };
 
   const renderSkills = (skills?: Person['skills']) => {
@@ -260,12 +274,11 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
       const isDeleteOperation = people.some(p => p.delete);
       const isReassignOperation = people.some(p => p.reassign);
       
-      // Update selected people for modal, but don't immediately open it
-      // This ensures we don't trigger a re-render during the current render
+      // Update selected people for modal
       if (isDeleteOperation || isReassignOperation) {
         setTimeout(() => {
           setSelectedPeople(people);
-          onOpen();
+          onActionModalOpen();
         }, 0);
       }
       
@@ -342,7 +355,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
           {/* Reassignment Confirmation Modal */}
           {isReassignOperation && (
             <Modal 
-              isOpen={isOpen} 
+              isOpen={isActionModalOpen} 
               onClose={handleCancel}
               closeOnOverlayClick={!isReassigning}
               closeOnEsc={!isReassigning}
@@ -428,7 +441,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
           {/* Delete Confirmation Modal */}
           {isDeleteOperation && (
             <Modal 
-              isOpen={isOpen} 
+              isOpen={isActionModalOpen} 
               onClose={handleCancel}
               closeOnOverlayClick={!isDeleting}
               closeOnEsc={!isDeleting}
@@ -517,118 +530,133 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
     }
   };
 
+  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
-    <Box>
-      <Text fontSize="xl" fontWeight="bold" mb={4}>AI Power Tools</Text>
-      
-      <VStack spacing={6} align="stretch">
-        <FormControl>
-          <FormLabel>Enter your text</FormLabel>
-          <Textarea
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Enter text for AI analysis..."
-            minHeight="150px"
-          />
-        </FormControl>
+    <>
+      {/* Floating Chat Button */}
+      <Box
+        position="fixed"
+        bottom="4"
+        right="4"
+        zIndex={999}
+      >
+        <VStack spacing={4} align="flex-end">
+          {/* Chat Box */}
+          <SlideFade in={isChatOpen} offsetY="20px">
+            <Box
+              display={isChatOpen ? 'block' : 'none'}
+              width="350px"
+              bg={bgColor}
+              borderWidth="1px"
+              borderColor={borderColor}
+              borderRadius="lg"
+              boxShadow="lg"
+              mb={4}
+            >
+              {/* Chat Header */}
+              <Box
+                p={4}
+                borderBottomWidth="1px"
+                borderColor={borderColor}
+                bg={useColorModeValue('blue.500', 'blue.400')}
+                color="white"
+                borderTopRadius="lg"
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Text fontWeight="bold">AI Power Tools</Text>
+                <IconButton
+                  aria-label="Close chat"
+                  icon={<CloseIcon />}
+                  size="sm"
+                  variant="ghost"
+                  color="white"
+                  _hover={{ bg: 'blue.600' }}
+                  onClick={onChatToggle}
+                />
+              </Box>
 
-        <Button
-          colorScheme="blue"
-          onClick={handleSubmit}
-          isLoading={isLoading}
-          loadingText="Processing"
-        >
-          Analyze Text
-        </Button>
+              {/* Chat Body */}
+              <Box p={4}>
+                <VStack spacing={4}>
+                  <FormControl>
+                    <Textarea
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      placeholder="Enter text for AI analysis... (Press Enter to submit)"
+                      minHeight="100px"
+                      resize="none"
+                    />
+                  </FormControl>
 
-        {response && (
-          <Box mt={4} p={4} borderWidth={1} borderRadius="md">
-            <Text fontSize="lg" fontWeight="bold" mb={2}>{response.description}</Text>
-            {renderResponse(response.output)}
-            
-            <Box mt={4} fontSize="sm" color="gray.600">
-              <Text>Processed at: {new Date(response.metadata.processedAt).toLocaleString()}</Text>
-              <Text>Processing time: {response.metadata.processingTimeMs}ms</Text>
+                  <IconButton
+                    aria-label="Analyze text"
+                    icon={<ArrowRightIcon />}
+                    onClick={handleSubmit}
+                    isLoading={isLoading}
+                    colorScheme="blue"
+                    width="full"
+                    size="lg"
+                  />
+                </VStack>
+              </Box>
             </Box>
+          </SlideFade>
 
-            {/* Temporarily disabled tracing
-            <Box mt={4}>
-              <Text fontWeight="bold" mb={2}>Execution Trace:</Text>
-              {response.trace.map((entry, index) => (
-                <Box 
-                  key={index} 
-                  mt={2} 
-                  p={3} 
-                  borderWidth={1} 
-                  borderRadius="md" 
-                  backgroundColor="gray.50"
-                >
-                  <Text fontWeight="semibold" color="blue.600">
-                    {entry.type} {entry.name ? `(${entry.name})` : ''}
-                  </Text>
-                  {entry.arguments && (
-                    <Box mt={1}>
-                      <Text fontWeight="medium">Arguments:</Text>
-                      <VStack align="stretch" spacing={1} mt={2}>
-                        {entry.name === 'listOperators' && (
-                          <>
-                            {entry.arguments.fields && (
-                              <Text fontSize="sm">
-                                <Text as="span" fontWeight="medium">Fields requested: </Text>
-                                {entry.arguments.fields.join(', ')}
-                              </Text>
-                            )}
-                            {entry.arguments.skillFilter && (
-                              <Text fontSize="sm">
-                                <Text as="span" fontWeight="medium">Skill filter: </Text>
-                                {entry.arguments.skillFilter}
-                              </Text>
-                            )}
-                            {entry.arguments.proficiencyFilter && (
-                              <Text fontSize="sm">
-                                <Text as="span" fontWeight="medium">Proficiency filter: </Text>
-                                {entry.arguments.proficiencyFilter}
-                              </Text>
-                            )}
-                            {entry.arguments.teamName && (
-                              <Text fontSize="sm">
-                                <Text as="span" fontWeight="medium">Team filter: </Text>
-                                {entry.arguments.teamName}
-                              </Text>
-                            )}
-                            {entry.arguments.isTeamLead !== undefined && (
-                              <Text fontSize="sm">
-                                <Text as="span" fontWeight="medium">Team lead filter: </Text>
-                                {entry.arguments.isTeamLead ? 'Yes' : 'No'}
-                              </Text>
-                            )}
-                          </>
-                        )}
-                        {entry.name !== 'listOperators' && (
-                          <Text as="pre" fontSize="sm" whiteSpace="pre-wrap">
-                            {JSON.stringify(entry.arguments, null, 2)}
-                          </Text>
-                        )}
-                      </VStack>
-                    </Box>
-                  )}
-                  {entry.result && (
-                    <Box mt={1}>
-                      <Text fontWeight="medium">Result:</Text>
-                      <Text as="pre" fontSize="sm" whiteSpace="pre-wrap">
-                        {typeof entry.result === 'string' 
-                          ? entry.result 
-                          : JSON.stringify(entry.result, null, 2)}
-                      </Text>
-                    </Box>
-                  )}
+          {/* Toggle Button */}
+          <Tooltip label={isChatOpen ? 'Close AI Tools' : 'Open AI Tools'} placement="left">
+            <IconButton
+              aria-label="Toggle AI Tools"
+              icon={<FiZap />}
+              onClick={onChatToggle}
+              colorScheme="yellow"
+              size="lg"
+              borderRadius="full"
+              boxShadow="lg"
+            />
+          </Tooltip>
+        </VStack>
+      </Box>
+
+      {/* Results Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={onModalClose}
+        size="xl"
+        scrollBehavior="inside"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>AI Analysis Results</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {response && (
+              <Box>
+                <Text fontSize="lg" fontWeight="bold" mb={4}>{response.description}</Text>
+                {renderResponse(response.output)}
+                
+                <Box mt={4} fontSize="sm" color="gray.600">
+                  <Text>Processed at: {new Date(response.metadata.processedAt).toLocaleString()}</Text>
+                  <Text>Processing time: {response.metadata.processingTimeMs}ms</Text>
                 </Box>
-              ))}
-            </Box>
-            */}
-          </Box>
-        )}
-      </VStack>
-    </Box>
+              </Box>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" onClick={onModalClose}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   );
 }; 

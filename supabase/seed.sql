@@ -111,7 +111,8 @@ INSERT INTO public.teams (id, name, description)
 VALUES 
     ('e5f6a7b8-c9d0-8765-4321-9a8b7c6d5e4f', 'Technical Support', 'Handles technical issues and bugs'),
     ('f6a7b8c9-d0e1-8765-4321-8b9c7d6e5f4a', 'Customer Success', 'Handles feature requests and customer experience'),
-    ('a7b8c9d0-e1f2-8765-4321-7c6d5e4f3a2b', 'Billing Support', 'Handles billing and subscription issues');
+    ('a7b8c9d0-e1f2-8765-4321-7c6d5e4f3a2b', 'Billing Support', 'Handles billing and subscription issues'),
+    ('d8e9f0a1-b2c3-8765-4321-6d5e4f3a2b1c', 'Triage', 'First responders for incoming issues');
 
 -- Update users with roles and team assignments
 UPDATE public.users 
@@ -312,3 +313,61 @@ VALUES
      'I received the refund confirmation email. Thank you for handling this so quickly.'),
     ('f6a7b8c9-d0e1-4321-8765-6f7a8b9c0d1e', '3b66feb4-d12c-4888-b36f-196a8c83590f', 
      'You are welcome! I have also added extra validation checks to prevent future double charges. The refund should appear in your account in 3-5 business days.');
+
+-- Add Triage team
+INSERT INTO public.teams (id, name, description)
+VALUES 
+    ('d8e9f0a1-b2c3-8765-4321-6d5e4f3a2b1c', 'Triage', 'First responders for incoming issues');
+
+-- Add more users with diverse roles and skills
+INSERT INTO public.users (id, full_name, role, team_id, is_team_lead)
+VALUES
+    -- Triage Team Members
+    ('e9f0a1b2-c3d4-8765-4321-5e4f3a2b1c0d', 'Elena Martinez', 'agent', 'd8e9f0a1-b2c3-8765-4321-6d5e4f3a2b1c', true),  -- Triage Team Lead
+    ('f0a1b2c3-d4e5-8765-4321-4f3a2b1c0d9e', 'James Wilson', 'agent', 'd8e9f0a1-b2c3-8765-4321-6d5e4f3a2b1c', false),
+    ('a1b2c3d4-e5f6-8765-4321-3a2b1c0d9e8f', 'Sophia Lee', 'agent', 'd8e9f0a1-b2c3-8765-4321-6d5e4f3a2b1c', false),
+    ('b2c3d4e5-f6a7-8765-4321-2b1c0d9e8f7a', 'Michael Chang', 'agent', 'd8e9f0a1-b2c3-8765-4321-6d5e4f3a2b1c', false),
+    
+    -- Additional Technical Support Members
+    ('c3d4e5f6-a7b8-8765-4321-1c0d9e8f7a6b', 'Rachel Green', 'agent', 'e5f6a7b8-c9d0-8765-4321-9a8b7c6d5e4f', false),
+    ('d4e5f6a7-b8c9-8765-4321-0d9e8f7a6b5c', 'David Kumar', 'agent', 'e5f6a7b8-c9d0-8765-4321-9a8b7c6d5e4f', false),
+    
+    -- Additional Customer Success Members
+    ('e5f6a7b8-c9d0-8765-4321-9e8f7a6b5c4d', 'Lisa Johnson', 'agent', 'f6a7b8c9-d0e1-8765-4321-8b9c7d6e5f4a', false),
+    ('f6a7b8c9-d0e1-8765-4321-8f7a6b5c4d3e', 'Carlos Rodriguez', 'agent', 'f6a7b8c9-d0e1-8765-4321-8b9c7d6e5f4a', false);
+
+-- Add skills for new users
+INSERT INTO public.agent_skills (agent, proficiency)
+VALUES
+    -- Elena Martinez (Triage Lead) skills
+    ('e9f0a1b2-c3d4-8765-4321-5e4f3a2b1c0d', 'b5c6d7e8-f9a0-4321-8765-5e6f7a8b9c0d'),  -- SQL Expert
+    ('e9f0a1b2-c3d4-8765-4321-5e4f3a2b1c0d', 'f9a0b1c2-d3e4-4321-8765-9c0d1e2f3a4b'),  -- AWS Certified
+    ('e9f0a1b2-c3d4-8765-4321-5e4f3a2b1c0d', 'e8f9a0b1-c2d3-4321-8765-8b9c0d1e2f3a'),  -- Support Lead
+    
+    -- James Wilson (Triage) skills
+    ('f0a1b2c3-d4e5-8765-4321-4f3a2b1c0d9e', 'c6d7e8f9-a0b1-4321-8765-6f7a8b9c0d1e'),  -- Database Administrator
+    ('f0a1b2c3-d4e5-8765-4321-4f3a2b1c0d9e', 'd7e8f9a0-b1c2-4321-8765-7a8b9c0d1e2f'),  -- Senior Support
+    
+    -- Sophia Lee (Triage) skills
+    ('a1b2c3d4-e5f6-8765-4321-3a2b1c0d9e8f', 'b1c2d3e4-f5a6-4321-8765-1e2f3a4b5c6d'),  -- Documentation Specialist
+    ('a1b2c3d4-e5f6-8765-4321-3a2b1c0d9e8f', 'c2d3e4f5-a6b7-4321-8765-2f3a4b5c6d7e'),  -- Knowledge Base Manager
+    
+    -- Michael Chang (Triage) skills
+    ('b2c3d4e5-f6a7-8765-4321-2b1c0d9e8f7a', 'a0b1c2d3-e4f5-4321-8765-0d1e2f3a4b5c'),  -- Cloud Expert
+    ('b2c3d4e5-f6a7-8765-4321-2b1c0d9e8f7a', 'f9a0b1c2-d3e4-4321-8765-9c0d1e2f3a4b'),  -- AWS Certified
+    
+    -- Rachel Green (Technical Support) skills
+    ('c3d4e5f6-a7b8-8765-4321-1c0d9e8f7a6b', 'b5c6d7e8-f9a0-4321-8765-5e6f7a8b9c0d'),  -- SQL Expert
+    ('c3d4e5f6-a7b8-8765-4321-1c0d9e8f7a6b', 'd7e8f9a0-b1c2-4321-8765-7a8b9c0d1e2f'),  -- Senior Support
+    
+    -- David Kumar (Technical Support) skills
+    ('d4e5f6a7-b8c9-8765-4321-0d9e8f7a6b5c', 'e8f9a0b1-c2d3-4321-8765-8b9c0d1e2f3a'),  -- Support Lead
+    ('d4e5f6a7-b8c9-8765-4321-0d9e8f7a6b5c', 'a0b1c2d3-e4f5-4321-8765-0d1e2f3a4b5c'),  -- Cloud Expert
+    
+    -- Lisa Johnson (Customer Success) skills
+    ('e5f6a7b8-c9d0-8765-4321-9e8f7a6b5c4d', 'b5c6d7e8-f9a0-4321-8765-5e6f7a8b9c0d'),  -- SQL Expert
+    ('e5f6a7b8-c9d0-8765-4321-9e8f7a6b5c4d', 'f9a0b1c2-d3e4-4321-8765-9c0d1e2f3a4b'),  -- AWS Certified
+    
+    -- Carlos Rodriguez (Customer Success) skills
+    ('f6a7b8c9-d0e1-8765-4321-8f7a6b5c4d3e', 'd7e8f9a0-b1c2-4321-8765-7a8b9c0d1e2f'),  -- Senior Support
+    ('f6a7b8c9-d0e1-8765-4321-8f7a6b5c4d3e', 'c2d3e4f5-a6b7-4321-8765-2f3a4b5c6d7e');  -- Knowledge Base Manager

@@ -8,7 +8,6 @@ import { SignupPage } from './pages/SignupPage';
 import { CreateTicketPage } from './pages/CreateTicketPage';
 import AdminPage from './pages/AdminPage';
 import ManagerPage from './pages/ManagerPage';
-import { HomePage } from './pages/HomePage';
 import { UserProvider, useUser } from './context/UserContext';
 import { useState, useEffect } from 'react';
 import { supabase } from './config/supabase';

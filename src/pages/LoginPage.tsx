@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Box, Button, FormControl, FormLabel, Input, VStack, Heading, Text, Link, useToast } from '@chakra-ui/react';
-import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { supabase } from '../config/supabase';
 import { useUser } from '../context/UserContext';
 
@@ -12,7 +12,6 @@ export const LoginPage = () => {
   });
   const toast = useToast();
   const navigate = useNavigate();
-  const location = useLocation();
   const { setUserId } = useUser();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
