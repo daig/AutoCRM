@@ -51,19 +51,37 @@ interface AIResponse {
   }[];
 }
 
-// Function to get all available team names
-async function getAvailableTeams(authToken: string): Promise<string[]> {
-  const supabase = createSupabaseClient(authToken);
-  const { data: teams, error } = await supabase
-    .from('teams')
-    .select('name')
-    .order('name');
+interface AvailableOptions {
+  teams: string[];
+  skills: string[];
+  proficiencies: string[];
+}
 
-  if (error) {
-    throw new Error(`Failed to get teams: ${error.message}`);
+// Function to get all available options in a single query
+async function getAvailableOptions(authToken: string): Promise<AvailableOptions> {
+  const supabase = createSupabaseClient(authToken);
+  
+  const [teamsResult, skillsResult, proficienciesResult] = await Promise.all([
+    supabase.from('teams').select('name').order('name'),
+    supabase.from('skills').select('name').order('name'),
+    supabase.from('proficiencies').select('name').order('name')
+  ]);
+
+  if (teamsResult.error) {
+    throw new Error(`Failed to get teams: ${teamsResult.error.message}`);
+  }
+  if (skillsResult.error) {
+    throw new Error(`Failed to get skills: ${skillsResult.error.message}`);
+  }
+  if (proficienciesResult.error) {
+    throw new Error(`Failed to get proficiencies: ${proficienciesResult.error.message}`);
   }
 
-  return teams.map(team => team.name);
+  return {
+    teams: teamsResult.data.map(team => team.name),
+    skills: skillsResult.data.map(skill => skill.name),
+    proficiencies: [...new Set(proficienciesResult.data.map(p => p.name))]
+  };
 }
 
 // Function to list operators
@@ -75,17 +93,17 @@ async function listOperators(
 ): Promise<string> {
   const supabase = createSupabaseClient(authToken);
 
-  // Build the base query with proper filtering
+  // Start with the base user fields
   let query = supabase
     .from('users')
     .select(`
       full_name,
       role,
       is_team_lead,
-      team:teams!left (
+      team:teams (
         name
       ),
-      skills:agent_skills!left (
+      skills:agent_skills (
         proficiency:proficiencies!inner (
           name,
           skill:skills!inner (
@@ -95,33 +113,35 @@ async function listOperators(
       )
     `);
 
-  // Only filter by team if provided
+  // Build the filter conditions
   if (teamName) {
-    query = query.eq('teams.name', teamName);
+    // Inner join with teams when filtering by team
+    query = query
+      .eq('teams.name', teamName)
+      .not('team', 'is', null);
   }
 
-  // Get the results
+  if (skillFilter || proficiencyFilter) {
+    // Inner join with skills when filtering by skills/proficiencies
+    query = query.not('skills', 'is', null);
+    
+    if (skillFilter) {
+      query = query.eq('skills.proficiency.skill.name', skillFilter);
+    }
+    if (proficiencyFilter) {
+      query = query.eq('skills.proficiency.name', proficiencyFilter);
+    }
+  }
+
+  // Get the filtered results
   const { data: users, error } = await query;
 
   if (error) {
     throw new Error(`Failed to get operators: ${error.message}`);
   }
 
-  // Filter users based on skills and proficiency in memory
-  let filteredUsers = users;
-  
-  if (skillFilter || proficiencyFilter) {
-    filteredUsers = users.filter(user => {
-      return user.skills.some(skill => {
-        const skillMatches = !skillFilter || skill.proficiency.skill.name === skillFilter;
-        const proficiencyMatches = !proficiencyFilter || skill.proficiency.name === proficiencyFilter;
-        return skillMatches && proficiencyMatches;
-      });
-    });
-  }
-
   // Format the results to be more readable
-  const formattedUsers = filteredUsers.map(user => ({
+  const formattedUsers = users.map(user => ({
     full_name: user.full_name,
     role: user.role,
     is_team_lead: user.is_team_lead,
@@ -188,17 +208,13 @@ serve(async (req) => {
       return createErrorResponse(error.message, 401);
     }
 
-    // Fetch available options
-    const [availableSkills, availableProficiencies, availableTeams] = await Promise.all([
-      getAvailableSkills(authToken),
-      getAvailableProficiencies(authToken),
-      getAvailableTeams(authToken)
-    ]);
+    // Fetch all available options in a single operation
+    const availableOptions = await getAvailableOptions(authToken);
 
     trace.push({
       type: 'metadata',
       name: 'available_options',
-      result: { skills: availableSkills, proficiencies: availableProficiencies, teams: availableTeams }
+      result: availableOptions
     });
 
     // Call OpenAI with function definition
@@ -218,17 +234,17 @@ serve(async (req) => {
             teamName: {
               type: "string",
               description: "Optional. The name of the team to filter by",
-              enum: availableTeams
+              enum: availableOptions.teams
             },
             skillFilter: {
               type: "string",
               description: "Filter operators by skill name",
-              enum: availableSkills
+              enum: availableOptions.skills
             },
             proficiencyFilter: {
               type: "string",
               description: "Filter operators by proficiency level",
-              enum: availableProficiencies
+              enum: availableOptions.proficiencies
             }
           }
         }
