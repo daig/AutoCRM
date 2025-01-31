@@ -43,34 +43,72 @@ interface AIResponse {
     processedAt: string;
     processingTimeMs: number;
   };
+  trace: {
+    type: string;
+    name?: string;
+    arguments?: any;
+    result?: any;
+  }[];
 }
 
 // Function to list team members
-async function listTeamMembers(teamName: string, authToken: string): Promise<string> {
+async function listTeamMembers(
+  teamName: string, 
+  authToken: string,
+  skillFilter?: string,
+  proficiencyFilter?: string
+): Promise<string> {
   const supabase = createSupabaseClient(authToken);
 
-  // First get the team ID
-  const { data: teams, error: teamError } = await supabase
-    .from('teams')
-    .select('id')
-    .eq('name', teamName)
-    .single();
-
-  if (teamError || !teams) {
-    throw new Error(`Team not found: ${teamError?.message || 'No team with that name'}`);
-  }
-
-  // Then get all users in that team
-  const { data: users, error: userError } = await supabase
+  // Build the base query
+  let query = supabase
     .from('users')
-    .select('full_name, role, is_team_lead')
-    .eq('team_id', teams.id);
+    .select(`
+      full_name,
+      role,
+      is_team_lead,
+      team:teams!inner (
+        name
+      ),
+      skills:agent_skills (
+        proficiency:proficiencies!inner (
+          name,
+          skill:skills!inner (
+            name
+          )
+        )
+      )
+    `)
+    .eq('team.name', teamName);
 
-  if (userError) {
-    throw new Error(`Failed to get team members: ${userError.message}`);
+  // If skill filter is provided, only return users with that skill
+  if (skillFilter) {
+    query = query.filter('skills.proficiency.skill.name', 'eq', skillFilter);
   }
 
-  return JSON.stringify(users, null, 2);
+  // If proficiency filter is provided, filter by proficiency level
+  if (proficiencyFilter) {
+    query = query.filter('skills.proficiency.name', 'eq', proficiencyFilter);
+  }
+
+  const { data: users, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to get team members: ${error.message}`);
+  }
+
+  // Format the results to be more readable
+  const formattedUsers = users.map(user => ({
+    full_name: user.full_name,
+    role: user.role,
+    is_team_lead: user.is_team_lead,
+    skills: user.skills?.map(skill => ({
+      skill: skill.proficiency.skill.name,
+      proficiency: skill.proficiency.name
+    })) || []
+  }));
+
+  return JSON.stringify(formattedUsers, null, 2);
 }
 
 serve(async (req) => {
@@ -81,6 +119,7 @@ serve(async (req) => {
   try {
     const startTime = performance.now();
     const { text } = await req.json();
+    const trace: AIResponse['trace'] = [];
     
     if (!text || typeof text !== 'string') {
       return createErrorResponse('Please provide a text string in the request body');
@@ -104,19 +143,32 @@ serve(async (req) => {
       }],
       functions: [{
         name: "listTeamMembers",
-        description: "Get a list of all users in a specified team",
+        description: "Get a list of all users in a specified team, optionally filtered by skills and/or proficiency levels",
         parameters: {
           type: "object",
           properties: {
             teamName: {
               type: "string",
               description: "The name of the team to query"
+            },
+            skillFilter: {
+              type: "string",
+              description: "Optional. Filter team members by skill name (e.g., 'Database Management', 'Customer Service')"
+            },
+            proficiencyFilter: {
+              type: "string",
+              description: "Optional. Filter team members by proficiency level (e.g., 'Expert', 'Intermediate', 'Beginner')"
             }
           },
           required: ["teamName"]
         }
       }],
       function_call: "auto"
+    });
+
+    trace.push({
+      type: 'openai_completion',
+      result: completion.choices[0].message
     });
 
     // Get the response
@@ -126,10 +178,22 @@ serve(async (req) => {
     // Check if the model wants to call a function
     if (responseMessage.function_call) {
       // Parse the function arguments
-      const { teamName } = JSON.parse(responseMessage.function_call.arguments);
+      const { teamName, skillFilter, proficiencyFilter } = JSON.parse(responseMessage.function_call.arguments);
       
+      trace.push({
+        type: 'function_call',
+        name: 'listTeamMembers',
+        arguments: { teamName, skillFilter, proficiencyFilter }
+      });
+
       // Call the function
-      const functionResult = await listTeamMembers(teamName, authToken);
+      const functionResult = await listTeamMembers(teamName, authToken, skillFilter, proficiencyFilter);
+
+      trace.push({
+        type: 'function_result',
+        name: 'listTeamMembers',
+        result: functionResult
+      });
 
       // Get the final response from OpenAI
       const secondResponse = await openai.chat.completions.create({
@@ -149,6 +213,11 @@ serve(async (req) => {
         ]
       });
 
+      trace.push({
+        type: 'openai_completion',
+        result: secondResponse.choices[0].message
+      });
+
       result = secondResponse.choices[0].message.content;
     } else {
       result = responseMessage.content;
@@ -160,7 +229,8 @@ serve(async (req) => {
       metadata: {
         processedAt: new Date().toISOString(),
         processingTimeMs: Math.round(performance.now() - startTime)
-      }
+      },
+      trace
     };
 
     return createSuccessResponse(response);

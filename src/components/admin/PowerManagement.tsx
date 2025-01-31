@@ -18,6 +18,12 @@ interface AIResponse {
     processedAt: string;
     processingTimeMs: number;
   };
+  trace: {
+    type: string;
+    name?: string;
+    arguments?: any;
+    result?: any;
+  }[];
 }
 
 export const PowerManagement: React.FC = () => {
@@ -95,6 +101,42 @@ export const PowerManagement: React.FC = () => {
             <Box mt={4} fontSize="sm" color="gray.600">
               <Text>Processed at: {new Date(response.metadata.processedAt).toLocaleString()}</Text>
               <Text>Processing time: {response.metadata.processingTimeMs}ms</Text>
+            </Box>
+
+            <Box mt={4}>
+              <Text fontWeight="bold" mb={2}>Execution Trace:</Text>
+              {response.trace.map((entry, index) => (
+                <Box 
+                  key={index} 
+                  mt={2} 
+                  p={3} 
+                  borderWidth={1} 
+                  borderRadius="md" 
+                  backgroundColor="gray.50"
+                >
+                  <Text fontWeight="semibold" color="blue.600">
+                    {entry.type} {entry.name ? `(${entry.name})` : ''}
+                  </Text>
+                  {entry.arguments && (
+                    <Box mt={1}>
+                      <Text fontWeight="medium">Arguments:</Text>
+                      <Text as="pre" fontSize="sm" whiteSpace="pre-wrap">
+                        {JSON.stringify(entry.arguments, null, 2)}
+                      </Text>
+                    </Box>
+                  )}
+                  {entry.result && (
+                    <Box mt={1}>
+                      <Text fontWeight="medium">Result:</Text>
+                      <Text as="pre" fontSize="sm" whiteSpace="pre-wrap">
+                        {typeof entry.result === 'string' 
+                          ? entry.result 
+                          : JSON.stringify(entry.result, null, 2)}
+                      </Text>
+                    </Box>
+                  )}
+                </Box>
+              ))}
             </Box>
           </Box>
         )}

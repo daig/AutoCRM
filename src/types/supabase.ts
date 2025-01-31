@@ -42,33 +42,6 @@ export type Database = {
           },
         ]
       }
-      knowledge_base: {
-        Row: {
-          content: string
-          created_at: string | null
-          id: string
-          tags: string[] | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          content: string
-          created_at?: string | null
-          id?: string
-          tags?: string[] | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          content?: string
-          created_at?: string | null
-          id?: string
-          tags?: string[] | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       proficiencies: {
         Row: {
           description: string | null
