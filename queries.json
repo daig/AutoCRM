@@ -1,0 +1,367 @@
+[
+  {
+    "prompt": "Show me everyone on the Triage team",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Operators in Triage",
+        "fields": ["name"],
+        "teamName": "Triage"
+      }
+    }
+  },
+  {
+    "prompt": "Get me all the cloud experts from the Customer Success group",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Cloud experts in Customer Success",
+        "fields": ["name", "skills"],
+        "teamName": "Customer Success",
+        "proficiencyFilter": "Cloud Expert"
+      }
+    }
+  },
+  {
+    "prompt": "List all team leads in Technical Support",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Team leads in Technical Support",
+        "fields": ["name", "is_team_lead", "team"],
+        "teamName": "Technical Support",
+        "isTeamLead": true
+      }
+    }
+  },
+  {
+    "prompt": "Remove all Triage team members who are not team leads",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete non-lead Triage members",
+        "fields": ["name", "team", "is_team_lead"],
+        "teamName": "Triage",
+        "isTeamLead": false
+      }
+    }
+  },
+  {
+    "prompt": "Show me operators with Database Management skill at the SQL Expert level",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Operators with Database Management at SQL Expert level",
+        "fields": ["name", "skills"],
+        "skillFilter": "Database Management",
+        "proficiencyFilter": "SQL Expert"
+      }
+    }
+  },
+  {
+    "prompt": "Reassign the team leads from Triage to Technical Support",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Move Triage team leads to Technical Support",
+        "fields": ["name", "team"],
+        "teamName": "Triage",
+        "isTeamLead": true,
+        "targetTeam": "Technical Support"
+      }
+    }
+  },
+  {
+    "prompt": "Delete all operators with Cloud Infrastructure skill in the Billing Support team",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete Billing Support operators with Cloud Infrastructure skill",
+        "fields": ["name", "team", "skills"],
+        "teamName": "Billing Support",
+        "skillFilter": "Cloud Infrastructure"
+      }
+    }
+  },
+  {
+    "prompt": "List everyone who is a Support Lead, with the skill Customer Service",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Operators with Customer Service skill at Support Lead level",
+        "fields": ["name", "skills"],
+        "skillFilter": "Customer Service",
+        "proficiencyFilter": "Support Lead"
+      }
+    }
+  },
+  {
+    "prompt": "Who are the AWS Certified operators in the Triage team?",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "AWS Certified in Triage",
+        "fields": ["name", "skills"],
+        "teamName": "Triage",
+        "proficiencyFilter": "AWS Certified"
+      }
+    }
+  },
+  {
+    "prompt": "Move all Senior Support agents from Billing Support to Triage",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Reassign Senior Support from Billing to Triage",
+        "fields": ["name", "team"],
+        "teamName": "Billing Support",
+        "proficiencyFilter": "Senior Support",
+        "targetTeam": "Triage"
+      }
+    }
+  },
+  {
+    "prompt": "Please display a list of all users across all teams",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "All operators",
+        "fields": ["name"]
+      }
+    }
+  },
+  {
+    "prompt": "Could you give me the names of any team leads in the Billing Support group?",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Team leads in Billing Support",
+        "fields": ["name", "is_team_lead", "team"],
+        "teamName": "Billing Support",
+        "isTeamLead": true
+      }
+    }
+  },
+  {
+    "prompt": "Which Triage members have the skill Customer Service at the Knowledge Base Manager level?",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Triage with Customer Service at Knowledge Base Manager",
+        "fields": ["name", "skills"],
+        "teamName": "Triage",
+        "skillFilter": "Customer Service",
+        "proficiencyFilter": "Knowledge Base Manager"
+      }
+    }
+  },
+  {
+    "prompt": "Remove any user in Customer Success who is not a team lead",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete non-lead users in Customer Success",
+        "fields": ["name", "team", "is_team_lead"],
+        "teamName": "Customer Success",
+        "isTeamLead": false
+      }
+    }
+  },
+  {
+    "prompt": "Reassign the SQL Experts from Technical Support to Billing Support",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Reassign SQL Experts from Technical to Billing",
+        "fields": ["name", "team"],
+        "teamName": "Technical Support",
+        "proficiencyFilter": "SQL Expert",
+        "targetTeam": "Billing Support"
+      }
+    }
+  },
+  {
+    "prompt": "Please list the names of all database administrators in the Triage team",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Database Administrators in Triage",
+        "fields": ["name", "skills"],
+        "teamName": "Triage",
+        "proficiencyFilter": "Database Administrator"
+      }
+    }
+  },
+  {
+    "prompt": "Show me all Technical Writing specialists across any team",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Operators with Technical Writing skill",
+        "fields": ["name", "skills"],
+        "skillFilter": "Technical Writing"
+      }
+    }
+  },
+  {
+    "prompt": "Delete all operators in the Triage team who have the skill Database Management",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete Triage operators with Database Management skill",
+        "fields": ["name", "team", "skills"],
+        "teamName": "Triage",
+        "skillFilter": "Database Management"
+      }
+    }
+  },
+  {
+    "prompt": "Who is the Senior Support agent in Customer Success?",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Senior Support in Customer Success",
+        "fields": ["name", "skills"],
+        "teamName": "Customer Success",
+        "proficiencyFilter": "Senior Support"
+      }
+    }
+  },
+  {
+    "prompt": "Reassign the Cloud Expert from Customer Success to Triage",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Reassign Cloud Expert from Customer Success to Triage",
+        "fields": ["name", "team"],
+        "teamName": "Customer Success",
+        "proficiencyFilter": "Cloud Expert",
+        "targetTeam": "Triage"
+      }
+    }
+  },
+  {
+    "prompt": "Move the AWS Certified operators in Billing Support to Customer Success",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Move AWS Certified from Billing Support to Customer Success",
+        "fields": ["name", "team"],
+        "teamName": "Billing Support",
+        "proficiencyFilter": "AWS Certified",
+        "targetTeam": "Customer Success"
+      }
+    }
+  },
+  {
+    "prompt": "Delete the operator who is a Documentation Specialist in Triage",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete Documentation Specialist in Triage",
+        "fields": ["name", "team", "skills"],
+        "teamName": "Triage",
+        "proficiencyFilter": "Documentation Specialist"
+      }
+    }
+  },
+  {
+    "prompt": "List the Customer Success members who have Cloud Infrastructure skill at the AWS Certified proficiency",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Customer Success with Cloud Infrastructure at AWS Certified",
+        "fields": ["name", "skills"],
+        "teamName": "Customer Success",
+        "skillFilter": "Cloud Infrastructure",
+        "proficiencyFilter": "AWS Certified"
+      }
+    }
+  },
+  {
+    "prompt": "Remove all agents in Technical Support who have the Customer Service skill but are not team leads",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete non-lead TS with Customer Service",
+        "fields": ["name", "team", "skills", "is_team_lead"],
+        "teamName": "Technical Support",
+        "skillFilter": "Customer Service",
+        "isTeamLead": false
+      }
+    }
+  },
+  {
+    "prompt": "Show me who is assigned to Billing Support with the role of team lead",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Team leads in Billing Support",
+        "fields": ["name", "is_team_lead", "team"],
+        "teamName": "Billing Support",
+        "isTeamLead": true
+      }
+    }
+  },
+  {
+    "prompt": "Please reassign the Documentation Specialist from Triage to Billing Support",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Reassign Documentation Specialist from Triage to Billing Support",
+        "fields": ["name", "team"],
+        "teamName": "Triage",
+        "proficiencyFilter": "Documentation Specialist",
+        "targetTeam": "Billing Support"
+      }
+    }
+  },
+  {
+    "prompt": "List me all users who are Database Administrators",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Operators with Database Administrator proficiency",
+        "fields": ["name", "skills"],
+        "proficiencyFilter": "Database Administrator"
+      }
+    }
+  },
+  {
+    "prompt": "Which operators are on the Customer Success team and have the skill Customer Service?",
+    "expectedOutput": {
+      "name": "listOperators",
+      "arguments": {
+        "description": "Customer Success with Customer Service skill",
+        "fields": ["name", "skills"],
+        "teamName": "Customer Success",
+        "skillFilter": "Customer Service"
+      }
+    }
+  },
+  {
+    "prompt": "Delete all Senior Support in Triage",
+    "expectedOutput": {
+      "name": "deleteOperators",
+      "arguments": {
+        "description": "Delete Senior Support in Triage",
+        "fields": ["name", "team", "skills"],
+        "teamName": "Triage",
+        "proficiencyFilter": "Senior Support"
+      }
+    }
+  },
+  {
+    "prompt": "Move the SQL Experts from Customer Success to Triage",
+    "expectedOutput": {
+      "name": "reassignOperators",
+      "arguments": {
+        "description": "Move SQL Experts from Customer Success to Triage",
+        "fields": ["name", "team"],
+        "teamName": "Customer Success",
+        "proficiencyFilter": "SQL Expert",
+        "targetTeam": "Triage"
+      }
+    }
+  }
+]
