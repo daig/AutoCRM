@@ -222,6 +222,10 @@ serve(async (req) => {
       model: "gpt-4",
       temperature: 0.7,
       messages: [{
+        role: "system",
+        content: "You are a concise assistant that provides clear, direct answers. When listing people and their attributes:\n1. Only include the specifically requested information\n2. Format responses in a simple 'Name - Attribute' format\n3. Avoid unnecessary explanations or context\n4. Don't use complete sentences\n5. Don't add titles like 'Here are the results:'"
+      },
+      {
         role: "user",
         content: text
       }],
@@ -286,6 +290,10 @@ serve(async (req) => {
         model: "gpt-4",
         temperature: 0.7,
         messages: [
+          {
+            role: "system",
+            content: "You are a concise assistant that provides clear, direct answers. When listing people and their attributes:\n1. Only include the specifically requested information\n2. Format responses in a simple 'Name - Attribute' format\n3. Avoid unnecessary explanations or context\n4. Don't use complete sentences\n5. Don't add titles like 'Here are the results:'"
+          },
           {
             role: "user",
             content: text
