@@ -60,7 +60,7 @@ async function listTeamMembers(
 ): Promise<string> {
   const supabase = createSupabaseClient(authToken);
 
-  // Build the base query
+  // Build the base query with proper filtering
   let query = supabase
     .from('users')
     .select(`
@@ -70,7 +70,7 @@ async function listTeamMembers(
       team:teams!inner (
         name
       ),
-      skills:agent_skills (
+      skills:agent_skills!left (
         proficiency:proficiencies!inner (
           name,
           skill:skills!inner (
@@ -79,26 +79,30 @@ async function listTeamMembers(
         )
       )
     `)
-    .eq('team.name', teamName);
+    .eq('teams.name', teamName);
 
-  // If skill filter is provided, only return users with that skill
-  if (skillFilter) {
-    query = query.filter('skills.proficiency.skill.name', 'eq', skillFilter);
-  }
-
-  // If proficiency filter is provided, filter by proficiency level
-  if (proficiencyFilter) {
-    query = query.filter('skills.proficiency.name', 'eq', proficiencyFilter);
-  }
-
+  // Get the results
   const { data: users, error } = await query;
 
   if (error) {
     throw new Error(`Failed to get team members: ${error.message}`);
   }
 
+  // Filter users based on skills and proficiency in memory
+  let filteredUsers = users;
+  
+  if (skillFilter || proficiencyFilter) {
+    filteredUsers = users.filter(user => {
+      return user.skills.some(skill => {
+        const skillMatches = !skillFilter || skill.proficiency.skill.name === skillFilter;
+        const proficiencyMatches = !proficiencyFilter || skill.proficiency.name === proficiencyFilter;
+        return skillMatches && proficiencyMatches;
+      });
+    });
+  }
+
   // Format the results to be more readable
-  const formattedUsers = users.map(user => ({
+  const formattedUsers = filteredUsers.map(user => ({
     full_name: user.full_name,
     role: user.role,
     is_team_lead: user.is_team_lead,
@@ -109,6 +113,37 @@ async function listTeamMembers(
   }));
 
   return JSON.stringify(formattedUsers, null, 2);
+}
+
+// Function to get all available skills
+async function getAvailableSkills(authToken: string): Promise<string[]> {
+  const supabase = createSupabaseClient(authToken);
+  const { data: skills, error } = await supabase
+    .from('skills')
+    .select('name');
+
+  if (error) {
+    throw new Error(`Failed to get skills: ${error.message}`);
+  }
+
+  return skills.map(skill => skill.name);
+}
+
+// Function to get all available proficiency levels
+async function getAvailableProficiencies(authToken: string): Promise<string[]> {
+  const supabase = createSupabaseClient(authToken);
+  const { data: proficiencies, error } = await supabase
+    .from('proficiencies')
+    .select('name')
+    .order('name');
+
+  if (error) {
+    throw new Error(`Failed to get proficiencies: ${error.message}`);
+  }
+
+  // Get unique proficiency names
+  const uniqueProficiencies = [...new Set(proficiencies.map(p => p.name))];
+  return uniqueProficiencies;
 }
 
 serve(async (req) => {
@@ -133,6 +168,18 @@ serve(async (req) => {
       return createErrorResponse(error.message, 401);
     }
 
+    // Fetch available skills and proficiencies
+    const [availableSkills, availableProficiencies] = await Promise.all([
+      getAvailableSkills(authToken),
+      getAvailableProficiencies(authToken)
+    ]);
+
+    trace.push({
+      type: 'metadata',
+      name: 'available_options',
+      result: { skills: availableSkills, proficiencies: availableProficiencies }
+    });
+
     // Call OpenAI with function definition
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
@@ -153,11 +200,13 @@ serve(async (req) => {
             },
             skillFilter: {
               type: "string",
-              description: "Optional. Filter team members by skill name (e.g., 'Database Management', 'Customer Service')"
+              description: "Filter team members by skill name",
+              enum: availableSkills
             },
             proficiencyFilter: {
               type: "string",
-              description: "Optional. Filter team members by proficiency level (e.g., 'Expert', 'Intermediate', 'Beginner')"
+              description: "Filter team members by proficiency level",
+              enum: availableProficiencies
             }
           },
           required: ["teamName"]
