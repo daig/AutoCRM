@@ -30,36 +30,12 @@ const Deno = window.Deno;
 
 console.log("Hello from Functions!")
 
-const SYSTEM_PROMPT = `You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has only the requested fields. Follow these guidelines:
+const SYSTEM_PROMPT = `You are a "AI Power Tool" that helps find and filter people based on their teams, roles, and skills. When using the listOperators function:
 
-1. When using the listOperators function, only request fields that are needed to answer the user's question
-2. When filtering by skills, always include both 'name' and 'skills' fields to show the person and their relevant skills
-3. When a skill is mentioned, show all proficiency levels for that skill
-4. Keep responses focused and relevant to the query
-5. Return pure JSON with no additional text or explanations
+1. Only request fields that are needed to answer the user's question
+2. When filtering by skills, always include the proficiency level
+3. When filtering by team lead status, always include the team name`;
 
-Available fields are: name, role, is_team_lead, team, and skills.
-
-Example responses:
-For "who has database skills?":
-[
-  {
-    "name": "John Smith",
-    "skills": [
-      { "skill": "Database Management", "proficiency": "Expert" },
-      { "skill": "SQL", "proficiency": "Senior" }
-    ]
-  }
-]
-
-For "who are the team leads in support?":
-[
-  {
-    "name": "Sarah Chen",
-    "team": "Technical Support",
-    "is_team_lead": true
-  }
-]`;
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -70,6 +46,7 @@ const openai = new OpenAI({
 interface AIResponse {
   input: string;
   output: string;
+  description: string;
   metadata: {
     processedAt: string;
     processingTimeMs: number;
@@ -136,7 +113,8 @@ async function listOperators(
   teamName?: string,
   skillFilter?: string,
   proficiencyFilter?: string,
-  fields?: string[]
+  fields?: string[],
+  isTeamLead?: boolean
 ): Promise<string> {
   const supabase = createSupabaseClient(authToken);
 
@@ -165,6 +143,11 @@ async function listOperators(
     query = query
       .eq('teams.name', teamName)
       .not('team', 'is', null);
+  }
+
+  // Add team lead filter if specified
+  if (isTeamLead !== undefined) {
+    query = query.eq('is_team_lead', isTeamLead);
   }
 
   if (skillFilter || proficiencyFilter) {
@@ -280,7 +263,7 @@ serve(async (req) => {
     // Call OpenAI with function definition
     const completion = await openai.chat.completions.create({
       model: "gpt-4",
-      temperature: 0.7,
+      temperature: 0.2,
       messages: [{
         role: "system",
         content: SYSTEM_PROMPT
@@ -291,13 +274,17 @@ serve(async (req) => {
       }],
       functions: [{
         name: "listOperators",
-        description: "Get a list of all operators (users), optionally filtered by team, skills, and/or proficiency levels",
+        description: "Get a list of all operators (users), optionally filtered by team, skills, proficiency levels, and team lead status",
         parameters: {
           type: "object",
           properties: {
+            description: {
+              type: "string",
+              description: "A concise description suitable for a table header (e.g. 'Team Leads in Technical Support', 'Operators with Database Skills')"
+            },
             teamName: {
               type: "string",
-              description: "Optional. The name of the team to filter by",
+              description: "The name of the team to filter by",
               enum: availableOptions.teams
             },
             skillFilter: {
@@ -310,6 +297,10 @@ serve(async (req) => {
               description: "Filter operators by proficiency level",
               enum: availableOptions.proficiencies
             },
+            isTeamLead: {
+              type: "boolean",
+              description: "Filter to show only team leads (true) or non-team leads (false)"
+            },
             fields: {
               type: "array",
               description: "List of fields to return for each operator. If not specified, returns all fields.",
@@ -318,7 +309,8 @@ serve(async (req) => {
                 enum: ["name", "role", "is_team_lead", "team", "skills"]
               }
             }
-          }
+          },
+          required: ["description"]
         }
       }],
       function_call: "auto"
@@ -336,16 +328,16 @@ serve(async (req) => {
     // Check if the model wants to call a function
     if (responseMessage.function_call) {
       // Parse the function arguments
-      const { teamName, skillFilter, proficiencyFilter, fields } = JSON.parse(responseMessage.function_call.arguments);
+      const { teamName, skillFilter, proficiencyFilter, fields, isTeamLead, description } = JSON.parse(responseMessage.function_call.arguments);
       
       trace.push({
         type: 'function_call',
         name: 'listOperators',
-        arguments: { teamName, skillFilter, proficiencyFilter, fields }
+        arguments: { teamName, skillFilter, proficiencyFilter, fields, isTeamLead, description }
       });
 
       // Call the function
-      const functionResult = await listOperators(authToken, teamName, skillFilter, proficiencyFilter, fields);
+      const functionResult = await listOperators(authToken, teamName, skillFilter, proficiencyFilter, fields, isTeamLead);
 
       trace.push({
         type: 'function_result',
@@ -353,49 +345,32 @@ serve(async (req) => {
         result: functionResult
       });
 
-      // Get the final response from OpenAI
-      const secondResponse = await openai.chat.completions.create({
-        model: "gpt-4",
-        temperature: 0.7,
-        messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT
-          },
-          {
-            role: "user",
-            content: text
-          },
-          responseMessage,
-          {
-            role: "function",
-            name: "listOperators",
-            content: functionResult
-          }
-        ]
-      });
+      const response: AIResponse = {
+        input: text,
+        output: functionResult,
+        description: description,
+        metadata: {
+          processedAt: new Date().toISOString(),
+          processingTimeMs: Math.round(performance.now() - startTime)
+        },
+        trace
+      };
 
-      trace.push({
-        type: 'openai_completion',
-        result: secondResponse.choices[0].message
-      });
-
-      result = secondResponse.choices[0].message.content;
+      return createSuccessResponse(response);
     } else {
-      result = responseMessage.content;
+      const response: AIResponse = {
+        input: text,
+        output: responseMessage.content,
+        description: "Natural language response",
+        metadata: {
+          processedAt: new Date().toISOString(),
+          processingTimeMs: Math.round(performance.now() - startTime)
+        },
+        trace
+      };
+
+      return createSuccessResponse(response);
     }
-
-    const response: AIResponse = {
-      input: text,
-      output: result,
-      metadata: {
-        processedAt: new Date().toISOString(),
-        processingTimeMs: Math.round(performance.now() - startTime)
-      },
-      trace
-    };
-
-    return createSuccessResponse(response);
   } catch (error) {
     console.error('Error:', error);
     return createErrorResponse('Internal server error: ' + error.message, 500);

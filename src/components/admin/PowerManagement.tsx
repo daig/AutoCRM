@@ -32,6 +32,7 @@ interface Person {
 interface AIResponse {
   input: string;
   output: string;
+  description: string;
   metadata: {
     processedAt: string;
     processingTimeMs: number;
@@ -124,6 +125,7 @@ export const PowerManagement: React.FC = () => {
 
   const renderResponse = (output: string) => {
     try {
+      // Since output is already a stringified JSON, parse it
       const people: Person[] = JSON.parse(output);
       
       // Get all available fields from the response
@@ -166,7 +168,7 @@ export const PowerManagement: React.FC = () => {
         </Table>
       );
     } catch (error) {
-      // Fallback to displaying raw output if it's not valid JSON
+      // If parsing fails or output is not valid JSON, display raw output
       return <Text whiteSpace="pre-wrap">{output}</Text>;
     }
   };
@@ -197,7 +199,7 @@ export const PowerManagement: React.FC = () => {
 
         {response && (
           <Box mt={4} p={4} borderWidth={1} borderRadius="md">
-            <Text fontWeight="bold" mb={2}>Analysis Result:</Text>
+            <Text fontSize="lg" fontWeight="bold" mb={2}>{response.description}</Text>
             {renderResponse(response.output)}
             
             <Box mt={4} fontSize="sm" color="gray.600">
@@ -247,6 +249,12 @@ export const PowerManagement: React.FC = () => {
                               <Text fontSize="sm">
                                 <Text as="span" fontWeight="medium">Team filter: </Text>
                                 {entry.arguments.teamName}
+                              </Text>
+                            )}
+                            {entry.arguments.isTeamLead !== undefined && (
+                              <Text fontSize="sm">
+                                <Text as="span" fontWeight="medium">Team lead filter: </Text>
+                                {entry.arguments.isTeamLead ? 'Yes' : 'No'}
                               </Text>
                             )}
                           </>
