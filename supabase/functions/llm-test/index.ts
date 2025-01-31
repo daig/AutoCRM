@@ -12,7 +12,7 @@ import {
   createSuccessResponse, 
   createErrorResponse 
 } from "../_shared/cors.ts"
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseClient, getAuthToken } from "../_shared/supabaseClient.ts"
 import OpenAI from "openai"
 
 // Add Deno types
@@ -30,9 +30,7 @@ const Deno = window.Deno;
 
 console.log("Hello from Functions!")
 
-// Initialize clients
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+// Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: Deno.env.get('OPENAI_API_KEY')!
 });
@@ -49,13 +47,7 @@ interface AIResponse {
 
 // Function to list team members
 async function listTeamMembers(teamName: string, authToken: string): Promise<string> {
-  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: `Bearer ${authToken}`
-      }
-    }
-  });
+  const supabase = createSupabaseClient(authToken);
 
   // First get the team ID
   const { data: teams, error: teamError } = await supabase
@@ -94,14 +86,13 @@ serve(async (req) => {
       return createErrorResponse('Please provide a text string in the request body');
     }
 
-    // Get the authorization header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return createErrorResponse('Missing authorization header', 401);
+    // Get auth token from request
+    let authToken: string;
+    try {
+      authToken = getAuthToken(req);
+    } catch (error) {
+      return createErrorResponse(error.message, 401);
     }
-
-    // Extract the JWT token
-    const authToken = authHeader.replace('Bearer ', '');
 
     // Call OpenAI with function definition
     const completion = await openai.chat.completions.create({
