@@ -35,13 +35,15 @@ const SYSTEM_PROMPT = `You are a "AI Power Tool" that helps find and filter peop
 IMPORTANT: You must ALWAYS use the provided tools directly. DO NOT write code examples or explain how to use the tools.
 - For queries about users → use listOperators
 - For deletion requests → use deleteOperators
+- For team reassignment requests → use reassignOperators
 
 When using the tools:
 1. For queries, you MUST specify which fields to return based on the user's question. Only list the name by default.
 2. When filtering by skills, always include the proficiency level and request the 'skills' field
 3. When filtering by team lead status, always include the team name and request the 'team' field
 4. When filtering by team, you MUST use the exact team name from the available options.
-5. For delete operations, always include the 'name' field and any fields needed to confirm the correct users are being deleted.`;
+5. For delete operations, always include the 'name' field and any fields needed to confirm the correct users are being deleted.
+6. For reassignment operations, always include both 'name' and 'team' fields to show current and future team assignments.`;
 
 
 // Initialize OpenAI client
@@ -122,7 +124,8 @@ async function listOperators(
   skillFilter?: string,
   proficiencyFilter?: string,
   isTeamLead?: boolean,
-  isDelete: boolean = false
+  operation: 'list' | 'delete' | 'reassign' = 'list',
+  targetTeam?: string
 ): Promise<string> {
   const supabase = createSupabaseClient(authToken);
 
@@ -141,6 +144,11 @@ async function listOperators(
   // If we're filtering by team, ensure team is included in the select
   if (teamName && !selectFields.includes(fieldMappings.team)) {
     selectFields = [...selectFields, fieldMappings.team];
+  }
+
+  // If we're filtering by skills, ensure skills is included in the select
+  if ((skillFilter || proficiencyFilter) && !selectFields.includes(fieldMappings.skills)) {
+    selectFields = [...selectFields, fieldMappings.skills];
   }
 
   // Start with the base user fields
@@ -193,6 +201,10 @@ async function listOperators(
     }
     if (!fields || fields.includes('team')) {
       result.team = user.team?.name;
+      // Add target team for reassign operations
+      if (operation === 'reassign' && targetTeam) {
+        result.targetTeam = targetTeam;
+      }
     }
     if (!fields || fields.includes('skills')) {
       result.skills = user.skills?.map(skill => ({
@@ -201,9 +213,11 @@ async function listOperators(
       })) || [];
     }
 
-    // Add delete flag if this is a delete operation
-    if (isDelete) {
+    // Add operation-specific flags
+    if (operation === 'delete') {
       result.delete = true;
+    } else if (operation === 'reassign') {
+      result.reassign = true;
     }
     
     return result;
@@ -373,6 +387,55 @@ serve(async (req) => {
             required: ["description", "fields"]
           }
         }
+      },
+      {
+        type: "function",
+        function: {
+          name: "reassignOperators",
+          description: "Reassign a list of operators (users) to a different team based on filters.",
+          parameters: {
+            type: "object",
+            properties: {
+              description: {
+                type: "string",
+                description: "A concise description of the reassignment operation (e.g. 'Move support agents to Technical Support team')"
+              },
+              fields: {
+                type: "array",
+                description: "List of fields to return for each operator. Must include 'name' and 'team' to show the changes.",
+                items: {
+                  type: "string",
+                  enum: ["name", "role", "is_team_lead", "team", "skills"]
+                }
+              },
+              targetTeam: {
+                type: "string",
+                description: "The team to reassign the users to",
+                enum: availableOptions.teams
+              },
+              teamName: {
+                type: "string",
+                description: "Filter source users by their current team",
+                enum: availableOptions.teams
+              },
+              skillFilter: {
+                type: "string",
+                description: "Filter operators by skill name",
+                enum: availableOptions.skills
+              },
+              proficiencyFilter: {
+                type: "string",
+                description: "Filter operators by proficiency level",
+                enum: availableOptions.proficiencies
+              },
+              isTeamLead: {
+                type: "boolean",
+                description: "Filter to show only team leads (true) or non-team leads (false)"
+              }
+            },
+            required: ["description", "fields", "targetTeam"]
+          }
+        }
       }],
       tool_choice: "required"  // Allow the model to choose any tool, but require a tool call
     });
@@ -390,18 +453,28 @@ serve(async (req) => {
     if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
       const toolCall = responseMessage.tool_calls[0];
       // Parse the function arguments
-      const { fields, teamName, skillFilter, proficiencyFilter, isTeamLead, description } = JSON.parse(toolCall.function.arguments);
+      const { fields, teamName, skillFilter, proficiencyFilter, isTeamLead, description, targetTeam } = JSON.parse(toolCall.function.arguments);
       
       const isDelete = toolCall.function.name === 'deleteOperators';
+      const isReassign = toolCall.function.name === 'reassignOperators';
       
       trace.push({
         type: 'function_call',
         name: toolCall.function.name,
-        arguments: { fields, teamName, skillFilter, proficiencyFilter, isTeamLead, description }
+        arguments: { fields, teamName, skillFilter, proficiencyFilter, isTeamLead, description, targetTeam }
       });
 
       // Call the function
-      const functionResult = await listOperators(authToken, fields, teamName, skillFilter, proficiencyFilter, isTeamLead, isDelete);
+      const functionResult = await listOperators(
+        authToken, 
+        fields, 
+        teamName, 
+        skillFilter, 
+        proficiencyFilter, 
+        isTeamLead, 
+        isDelete ? 'delete' : isReassign ? 'reassign' : 'list',
+        isReassign ? targetTeam : undefined
+      );
 
       trace.push({
         type: 'function_result',
@@ -415,7 +488,8 @@ serve(async (req) => {
         description: description,
         metadata: {
           processedAt: new Date().toISOString(),
-          processingTimeMs: Math.round(performance.now() - startTime)
+          processingTimeMs: Math.round(performance.now() - startTime),
+          ...(isReassign ? { targetTeam } : {})
         },
         trace
       };
