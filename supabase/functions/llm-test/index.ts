@@ -57,6 +57,21 @@ interface AvailableOptions {
   proficiencies: string[];
 }
 
+interface UserData {
+  full_name: string;
+  role: string;
+  is_team_lead: boolean;
+  team?: { name: string };
+  skills?: {
+    proficiency: {
+      name: string;
+      skill: {
+        name: string;
+      };
+    };
+  }[];
+}
+
 // Function to get all available options in a single query
 async function getAvailableOptions(authToken: string): Promise<AvailableOptions> {
   const supabase = createSupabaseClient(authToken);
@@ -89,29 +104,29 @@ async function listOperators(
   authToken: string,
   teamName?: string,
   skillFilter?: string,
-  proficiencyFilter?: string
+  proficiencyFilter?: string,
+  fields?: string[]
 ): Promise<string> {
   const supabase = createSupabaseClient(authToken);
+
+  // Define available fields and their corresponding query paths
+  const fieldMappings: Record<string, string> = {
+    name: 'full_name',
+    role: 'role',
+    is_team_lead: 'is_team_lead',
+    team: 'team:teams (name)',
+    skills: 'skills:agent_skills (proficiency:proficiencies!inner (name, skill:skills!inner (name)))'
+  };
+
+  // Build the select statement based on requested fields
+  const selectFields = fields && fields.length > 0
+    ? fields.map(field => fieldMappings[field] || field).join(',\n')
+    : Object.values(fieldMappings).join(',\n');
 
   // Start with the base user fields
   let query = supabase
     .from('users')
-    .select(`
-      full_name,
-      role,
-      is_team_lead,
-      team:teams (
-        name
-      ),
-      skills:agent_skills (
-        proficiency:proficiencies!inner (
-          name,
-          skill:skills!inner (
-            name
-          )
-        )
-      )
-    `);
+    .select(selectFields);
 
   // Build the filter conditions
   if (teamName) {
@@ -140,17 +155,31 @@ async function listOperators(
     throw new Error(`Failed to get operators: ${error.message}`);
   }
 
-  // Format the results to be more readable
-  const formattedUsers = users.map(user => ({
-    full_name: user.full_name,
-    role: user.role,
-    is_team_lead: user.is_team_lead,
-    team: user.team?.name,
-    skills: user.skills?.map(skill => ({
-      skill: skill.proficiency.skill.name,
-      proficiency: skill.proficiency.name
-    })) || []
-  }));
+  // Format the results based on requested fields
+  const formattedUsers = (users as UserData[]).map(user => {
+    const result: any = {};
+    
+    if (!fields || fields.includes('name')) {
+      result.name = user.full_name;
+    }
+    if (!fields || fields.includes('role')) {
+      result.role = user.role;
+    }
+    if (!fields || fields.includes('is_team_lead')) {
+      result.is_team_lead = user.is_team_lead;
+    }
+    if (!fields || fields.includes('team')) {
+      result.team = user.team?.name;
+    }
+    if (!fields || fields.includes('skills')) {
+      result.skills = user.skills?.map(skill => ({
+        skill: skill.proficiency.skill.name,
+        proficiency: skill.proficiency.name
+      })) || [];
+    }
+    
+    return result;
+  });
 
   return JSON.stringify(formattedUsers, null, 2);
 }
@@ -223,7 +252,7 @@ serve(async (req) => {
       temperature: 0.7,
       messages: [{
         role: "system",
-        content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has 'name' and 'skills' fields. The skills should be an array of strings. Do not include any additional text or explanations."
+        content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has only the requested fields. Follow these guidelines:\n1. When using the listOperators function, only request fields that are needed to answer the user's question\n2. When filtering by skills, always include both 'name' and 'skills' fields to show the person and their relevant skills\n3. When a skill is mentioned, show all proficiency levels for that skill\n4. Keep responses focused and relevant to the query\n\nAvailable fields are: name, role, is_team_lead, team, and skills. The response should be pure JSON with no additional text or explanations."
       },
       {
         role: "user",
@@ -249,6 +278,14 @@ serve(async (req) => {
               type: "string",
               description: "Filter operators by proficiency level",
               enum: availableOptions.proficiencies
+            },
+            fields: {
+              type: "array",
+              description: "List of fields to return for each operator. If not specified, returns all fields.",
+              items: {
+                type: "string",
+                enum: ["name", "role", "is_team_lead", "team", "skills"]
+              }
             }
           }
         }
@@ -268,16 +305,16 @@ serve(async (req) => {
     // Check if the model wants to call a function
     if (responseMessage.function_call) {
       // Parse the function arguments
-      const { teamName, skillFilter, proficiencyFilter } = JSON.parse(responseMessage.function_call.arguments);
+      const { teamName, skillFilter, proficiencyFilter, fields } = JSON.parse(responseMessage.function_call.arguments);
       
       trace.push({
         type: 'function_call',
         name: 'listOperators',
-        arguments: { teamName, skillFilter, proficiencyFilter }
+        arguments: { teamName, skillFilter, proficiencyFilter, fields }
       });
 
       // Call the function
-      const functionResult = await listOperators(authToken, teamName, skillFilter, proficiencyFilter);
+      const functionResult = await listOperators(authToken, teamName, skillFilter, proficiencyFilter, fields);
 
       trace.push({
         type: 'function_result',
@@ -292,7 +329,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has 'name' and 'skills' fields. The skills should be an array of strings. Do not include any additional text or explanations."
+            content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has only the requested fields. Follow these guidelines:\n1. When using the listOperators function, only request fields that are needed to answer the user's question\n2. When filtering by skills, always include both 'name' and 'skills' fields to show the person and their relevant skills\n3. When a skill is mentioned, show all proficiency levels for that skill\n4. Keep responses focused and relevant to the query\n\nAvailable fields are: name, role, is_team_lead, team, and skills. The response should be pure JSON with no additional text or explanations."
           },
           {
             role: "user",

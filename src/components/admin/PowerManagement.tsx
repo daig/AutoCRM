@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import {
   Box,
   Button,
@@ -10,53 +9,24 @@ import {
   Text,
   useToast,
   Table,
+  Thead,
   Tbody,
   Tr,
+  Th,
   Td,
+  Badge,
 } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
 
-// Custom styles for the markdown output
-const markdownStyles = {
-  '.response-markdown': {
-    fontFamily: 'monospace',
-    whiteSpace: 'pre',
-    overflowX: 'auto',
-    '& p': {
-      margin: 0,
-      lineHeight: '1.5',
-      whiteSpace: 'pre',
-      display: 'block',
-    },
-    '& strong': {
-      color: 'blue.600',
-      minWidth: '30ch',
-      display: 'inline-block',
-    },
-  },
-};
-
-// Custom styles for the response table
-const tableStyles = {
-  '.response-table': {
-    fontFamily: 'monospace',
-    width: '100%',
-    'td:first-of-type': {
-      color: 'blue.600',
-      fontWeight: 'bold',
-      width: '200px',
-      whiteSpace: 'nowrap',
-      paddingRight: '2rem',
-    },
-    'td:last-of-type': {
-      whiteSpace: 'normal',
-    },
-  },
-};
-
 interface Person {
-  name: string;
-  skills: string[];
+  name?: string;
+  role?: string;
+  is_team_lead?: boolean;
+  team?: string;
+  skills?: Array<{
+    skill: string;
+    proficiency: string;
+  }>;
 }
 
 interface AIResponse {
@@ -73,6 +43,26 @@ interface AIResponse {
     result?: any;
   }[];
 }
+
+// Custom styles for the response table
+const tableStyles = {
+  '.response-table': {
+    width: '100%',
+    'th': {
+      fontWeight: 'bold',
+      textAlign: 'left',
+      padding: '8px',
+      borderBottom: '2px solid',
+      borderColor: 'gray.200',
+    },
+    'td': {
+      padding: '8px',
+      borderBottom: '1px solid',
+      borderColor: 'gray.100',
+      verticalAlign: 'top',
+    },
+  },
+};
 
 export const PowerManagement: React.FC = () => {
   const [inputText, setInputText] = useState('');
@@ -117,16 +107,59 @@ export const PowerManagement: React.FC = () => {
     }
   };
 
+  const renderSkills = (skills?: Person['skills']) => {
+    if (!skills?.length) return null;
+    return skills.map((skill, index) => (
+      <Badge 
+        key={index} 
+        colorScheme="blue" 
+        mr={1} 
+        mb={1}
+        display="inline-block"
+      >
+        {skill.skill} ({skill.proficiency})
+      </Badge>
+    ));
+  };
+
   const renderResponse = (output: string) => {
     try {
       const people: Person[] = JSON.parse(output);
+      
+      // Get all available fields from the response
+      const hasName = people.some(p => 'name' in p);
+      const hasRole = people.some(p => 'role' in p);
+      const hasTeamLead = people.some(p => 'is_team_lead' in p);
+      const hasTeam = people.some(p => 'team' in p);
+      const hasSkills = people.some(p => 'skills' in p);
+
       return (
         <Table className="response-table" sx={tableStyles['.response-table']}>
+          <Thead>
+            <Tr>
+              {hasName && <Th>Name</Th>}
+              {hasRole && <Th>Role</Th>}
+              {hasTeamLead && <Th>Team Lead</Th>}
+              {hasTeam && <Th>Team</Th>}
+              {hasSkills && <Th>Skills</Th>}
+            </Tr>
+          </Thead>
           <Tbody>
             {people.map((person, index) => (
               <Tr key={index}>
-                <Td>{person.name}</Td>
-                <Td>{person.skills.join(', ')}</Td>
+                {hasName && <Td fontWeight="medium">{person.name}</Td>}
+                {hasRole && <Td>{person.role}</Td>}
+                {hasTeamLead && (
+                  <Td>
+                    {person.is_team_lead ? (
+                      <Badge colorScheme="green">Yes</Badge>
+                    ) : (
+                      <Badge colorScheme="gray">No</Badge>
+                    )}
+                  </Td>
+                )}
+                {hasTeam && <Td>{person.team}</Td>}
+                {hasSkills && <Td>{renderSkills(person.skills)}</Td>}
               </Tr>
             ))}
           </Tbody>
@@ -189,9 +222,41 @@ export const PowerManagement: React.FC = () => {
                   {entry.arguments && (
                     <Box mt={1}>
                       <Text fontWeight="medium">Arguments:</Text>
-                      <Text as="pre" fontSize="sm" whiteSpace="pre-wrap">
-                        {JSON.stringify(entry.arguments, null, 2)}
-                      </Text>
+                      <VStack align="stretch" spacing={1} mt={2}>
+                        {entry.name === 'listOperators' && (
+                          <>
+                            {entry.arguments.fields && (
+                              <Text fontSize="sm">
+                                <Text as="span" fontWeight="medium">Fields requested: </Text>
+                                {entry.arguments.fields.join(', ')}
+                              </Text>
+                            )}
+                            {entry.arguments.skillFilter && (
+                              <Text fontSize="sm">
+                                <Text as="span" fontWeight="medium">Skill filter: </Text>
+                                {entry.arguments.skillFilter}
+                              </Text>
+                            )}
+                            {entry.arguments.proficiencyFilter && (
+                              <Text fontSize="sm">
+                                <Text as="span" fontWeight="medium">Proficiency filter: </Text>
+                                {entry.arguments.proficiencyFilter}
+                              </Text>
+                            )}
+                            {entry.arguments.teamName && (
+                              <Text fontSize="sm">
+                                <Text as="span" fontWeight="medium">Team filter: </Text>
+                                {entry.arguments.teamName}
+                              </Text>
+                            )}
+                          </>
+                        )}
+                        {entry.name !== 'listOperators' && (
+                          <Text as="pre" fontSize="sm" whiteSpace="pre-wrap">
+                            {JSON.stringify(entry.arguments, null, 2)}
+                          </Text>
+                        )}
+                      </VStack>
                     </Box>
                   )}
                   {entry.result && (
