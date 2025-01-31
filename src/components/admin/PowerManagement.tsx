@@ -551,6 +551,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
               <Text>Processing time: {response.metadata.processingTimeMs}ms</Text>
             </Box>
 
+            {/* Temporarily disabled tracing
             <Box mt={4}>
               <Text fontWeight="bold" mb={2}>Execution Trace:</Text>
               {response.trace.map((entry, index) => (
@@ -624,6 +625,7 @@ export const PowerManagement: React.FC<PowerManagementProps> = ({ onUsersChange 
                 </Box>
               ))}
             </Box>
+            */}
           </Box>
         )}
       </VStack>

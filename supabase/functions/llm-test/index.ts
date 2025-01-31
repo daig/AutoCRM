@@ -514,16 +514,3 @@ serve(async (req) => {
     return createErrorResponse('Internal server error: ' + error.message, 500);
   }
 });
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make sure you have set the OPENAI_API_KEY and SUPABASE_ANON_KEY environment variables
-  3. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/llm-test' \
-    --header 'Authorization: Bearer YOUR_JWT_TOKEN' \
-    --header 'Content-Type: application/json' \
-    --data '{"text":"Who are the members of the Technical Support team?"}'
-
-*/

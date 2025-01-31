@@ -15,10 +15,41 @@ import { supabase } from './config/supabase';
 
 // Protected Route wrapper component
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useUser();
+  const { isAuthenticated, isLoading, userId, userRole } = useUser();
   const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
+  const [isTeamLead, setIsTeamLead] = useState(false);
 
-  if (isLoading) {
+  useEffect(() => {
+    const checkTeamLeadStatus = async () => {
+      if (!userId) {
+        setIsChecking(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('is_team_lead')
+          .eq('id', userId)
+          .single();
+
+        if (error) throw error;
+        setIsTeamLead(data.is_team_lead);
+      } catch (error) {
+        console.error('Error checking team lead status:', error);
+        setIsTeamLead(false);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    if (userId) {
+      checkTeamLeadStatus();
+    }
+  }, [userId]);
+
+  if (isLoading || (isAuthenticated && isChecking)) {
     return (
       <Center h="100vh">
         <Spinner size="xl" />
@@ -28,6 +59,17 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If we're at the root path, redirect based on role
+  if (location.pathname === '/') {
+    if (userRole === 'administrator') {
+      return <Navigate to="/admin" replace />;
+    } else if (userRole === 'agent') {
+      return <Navigate to={isTeamLead ? '/manager' : '/crm'} replace />;
+    } else {
+      return <Navigate to="/crm/create-ticket" replace />;
+    }
   }
 
   return children;
@@ -116,10 +158,50 @@ function ManagerRoute({ children }: { children: JSX.Element }) {
 
 // Auth Route wrapper component
 function AuthRoute({ children }: { children: JSX.Element }) {
-  const { isAuthenticated, isLoading } = useUser();
+  const { isAuthenticated, isLoading, userId } = useUser();
   const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
+  const [redirectPath, setRedirectPath] = useState<string | null>(null);
   
-  if (isLoading) {
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!userId) {
+        setIsChecking(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('role, is_team_lead')
+          .eq('id', userId)
+          .single();
+
+        if (error) throw error;
+
+        // Determine redirect path based on role
+        let path = '/crm/create-ticket'; // default path for customers
+        if (data.role === 'administrator') {
+          path = '/admin';
+        } else if (data.role === 'agent') {
+          path = data.is_team_lead ? '/manager' : '/crm';
+        }
+        
+        setRedirectPath(path);
+      } catch (error) {
+        console.error('Error checking user role:', error);
+        setRedirectPath('/crm/create-ticket'); // fallback to customer view
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    if (userId) {
+      checkUserRole();
+    }
+  }, [userId]);
+
+  if (isLoading || (isAuthenticated && isChecking)) {
     return (
       <Center h="100vh">
         <Spinner size="xl" />
@@ -127,13 +209,13 @@ function AuthRoute({ children }: { children: JSX.Element }) {
     );
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && redirectPath) {
     // If we have a saved location, go there
     if (location.state?.from) {
       return <Navigate to={location.state.from.pathname} replace />;
     }
-    // If we're on login/signup and there's no saved location, go to home
-    return <Navigate to="/" replace />;
+    // Otherwise use role-based redirect
+    return <Navigate to={redirectPath} replace />;
   }
 
   return children;
@@ -183,11 +265,9 @@ function App() {
                 </Layout>
               </ManagerRoute>
             } />
-            <Route path="/" element={
+            <Route path="*" element={
               <ProtectedRoute>
-                <Layout>
-                  <HomePage />
-                </Layout>
+                <Navigate to="/" replace />
               </ProtectedRoute>
             } />
           </Routes>

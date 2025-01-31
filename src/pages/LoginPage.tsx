@@ -42,6 +42,15 @@ export const LoginPage = () => {
       // Store the userId in context
       setUserId(data.user.id);
 
+      // Get user role and team lead status
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, is_team_lead')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError) throw userError;
+
       toast({
         title: 'Login successful',
         status: 'success',
@@ -49,9 +58,18 @@ export const LoginPage = () => {
         isClosable: true,
       });
 
-      // Get the intended destination from location state or default to home page
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
+      // Role-based redirection
+      if (userData.role === 'administrator') {
+        navigate('/admin');
+      } else if (userData.role === 'agent') {
+        if (userData.is_team_lead) {
+          navigate('/manager');
+        } else {
+          navigate('/crm');
+        }
+      } else {
+        navigate('/crm/create-ticket');
+      }
     } catch (error) {
       toast({
         title: 'Error',
