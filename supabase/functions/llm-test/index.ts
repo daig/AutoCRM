@@ -223,7 +223,7 @@ serve(async (req) => {
       temperature: 0.7,
       messages: [{
         role: "system",
-        content: "You are a concise assistant that provides clear, direct answers. When listing people and their attributes:\n1. Only include the specifically requested information\n2. Format responses in a simple 'Name - Attribute' format\n3. Avoid unnecessary explanations or context\n4. Don't use complete sentences\n5. Don't add titles like 'Here are the results:'"
+        content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has 'name' and 'skills' fields. The skills should be an array of strings. Do not include any additional text or explanations."
       },
       {
         role: "user",
@@ -292,7 +292,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "You are a concise assistant that provides clear, direct answers. When listing people and their attributes:\n1. Only include the specifically requested information\n2. Format responses in a simple 'Name - Attribute' format\n3. Avoid unnecessary explanations or context\n4. Don't use complete sentences\n5. Don't add titles like 'Here are the results:'"
+            content: "You are a concise assistant that lists people and their skills. Return your response as a JSON array where each person has 'name' and 'skills' fields. The skills should be an array of strings. Do not include any additional text or explanations."
           },
           {
             role: "user",

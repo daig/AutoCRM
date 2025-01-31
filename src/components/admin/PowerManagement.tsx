@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import {
   Box,
   Button,
@@ -8,8 +9,55 @@ import {
   VStack,
   Text,
   useToast,
+  Table,
+  Tbody,
+  Tr,
+  Td,
 } from '@chakra-ui/react';
 import { supabase } from '../../config/supabase';
+
+// Custom styles for the markdown output
+const markdownStyles = {
+  '.response-markdown': {
+    fontFamily: 'monospace',
+    whiteSpace: 'pre',
+    overflowX: 'auto',
+    '& p': {
+      margin: 0,
+      lineHeight: '1.5',
+      whiteSpace: 'pre',
+      display: 'block',
+    },
+    '& strong': {
+      color: 'blue.600',
+      minWidth: '30ch',
+      display: 'inline-block',
+    },
+  },
+};
+
+// Custom styles for the response table
+const tableStyles = {
+  '.response-table': {
+    fontFamily: 'monospace',
+    width: '100%',
+    'td:first-of-type': {
+      color: 'blue.600',
+      fontWeight: 'bold',
+      width: '200px',
+      whiteSpace: 'nowrap',
+      paddingRight: '2rem',
+    },
+    'td:last-of-type': {
+      whiteSpace: 'normal',
+    },
+  },
+};
+
+interface Person {
+  name: string;
+  skills: string[];
+}
 
 interface AIResponse {
   input: string;
@@ -69,6 +117,27 @@ export const PowerManagement: React.FC = () => {
     }
   };
 
+  const renderResponse = (output: string) => {
+    try {
+      const people: Person[] = JSON.parse(output);
+      return (
+        <Table className="response-table" sx={tableStyles['.response-table']}>
+          <Tbody>
+            {people.map((person, index) => (
+              <Tr key={index}>
+                <Td>{person.name}</Td>
+                <Td>{person.skills.join(', ')}</Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      );
+    } catch (error) {
+      // Fallback to displaying raw output if it's not valid JSON
+      return <Text whiteSpace="pre-wrap">{output}</Text>;
+    }
+  };
+
   return (
     <Box>
       <Text fontSize="xl" fontWeight="bold" mb={4}>AI Power Tools</Text>
@@ -96,7 +165,7 @@ export const PowerManagement: React.FC = () => {
         {response && (
           <Box mt={4} p={4} borderWidth={1} borderRadius="md">
             <Text fontWeight="bold" mb={2}>Analysis Result:</Text>
-            <Text whiteSpace="pre-wrap">{response.output}</Text>
+            {renderResponse(response.output)}
             
             <Box mt={4} fontSize="sm" color="gray.600">
               <Text>Processed at: {new Date(response.metadata.processedAt).toLocaleString()}</Text>
